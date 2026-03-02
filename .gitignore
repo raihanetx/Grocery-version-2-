@@ -30,9 +30,6 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
 # vercel
 .vercel
 
@@ -47,5 +44,9 @@ test
 prompt
 
 server.log
+
+# Keep env files for this project (user wants to include them)
+# .env*
+
 # Skills directory
 /skills/
