@@ -1402,7 +1402,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                   <div className="order-grid-row">
                     <div className="category-name-cell">
                       <div style={{width: '36px', height: '36px', border: cat.type === 'icon' ? '1px solid #e2e8f0' : 'none', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: cat.type === 'image' ? 'hidden' : 'visible'}}>
-                        {cat.type === 'icon' ? <i className={cat.icon}></i> : <img src={cat.image} style={{width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px'}} alt={cat.name} />}
+                        {cat.type === 'icon' ? <i className={cat.icon}></i> : (cat.image ? <img src={cat.image} style={{width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px'}} alt={cat.name} /> : <i className="ri-image-line" style={{color: '#94a3b8'}}></i>)}
                       </div>
                       <span>{cat.name}</span>
                     </div>
