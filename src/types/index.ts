@@ -173,22 +173,48 @@ export interface AbandonedCheckout {
 
 // Customer Types
 export interface CustomerOrder {
+  id: string
+  orderNumber: string
   date: string
   time: string
   timeAgo: string
-  visitCount: number
-  products: AbandonedProduct[]
+  status: string
+  courierStatus: string | null
+  paymentMethod: string
+  subtotal: number
+  deliveryCharge: number
+  discount: number
+  couponDiscount: number
   total: number
+  items: {
+    name: string
+    variety: string | null
+    quantity: number
+    basePrice: number
+    offerDiscount: number
+    couponDiscount: number
+    totalPrice: number
+  }[]
+  couponCodes: {
+    code: string
+    discount: number
+  }[]
 }
 
 export interface CustomerProfile {
-  id: number
+  id: string
   name: string
   phone: string
   address: string
+  email?: string
   totalSpent: number
   totalOrders: number
-  orders: CustomerOrder[]
+  completedOrders: number
+  pendingOrders: number
+  canceledOrders: number
+  lastOrderDate: string | null
+  createdAt: string
+  orders?: CustomerOrder[]
 }
 
 // Settings Types

@@ -1094,68 +1094,144 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   }
 
   // Customer Profile State
-  const [customerProfiles] = useState<CustomerProfile[]>([
-    {
-      id: 1, name: 'Rafi Hossain', phone: '+8801712345678',
-      address: '555 Park Ave, Dhaka',
-      totalSpent: 450.50, totalOrders: 5,
-      orders: [
-        {
-          date: 'Feb 24, 2026', time: '3:42 PM', timeAgo: '2 days ago', visitCount: 21,
-          products: [
-            { name: 'Organic Milk', variants: [{ label: '1L', qty: 2 }] },
-            { name: 'Whole Wheat Bread', variants: [{ label: null, qty: 2 }] },
-            { name: 'Farm Eggs', variants: [{ label: '12 pcs', qty: 1 }] },
-          ],
-          total: 45.92
-        },
-        {
-          date: 'Feb 10, 2026', time: '5:10 PM', timeAgo: '2 weeks ago', visitCount: 15,
-          products: [
-            { name: 'Basmati Rice', variants: [{ label: '5kg', qty: 1 }] },
-            { name: 'Soybean Oil', variants: [{ label: '2L', qty: 1 }] },
-          ],
-          total: 85.50
-        },
-      ]
-    },
-    {
-      id: 2, name: 'Tariq Mahmud', phone: '+8801812345678',
-      address: '888 River St, Chittagong',
-      totalSpent: 1250.00, totalOrders: 12,
-      orders: [
-        {
-          date: 'Feb 25, 2026', time: '10:00 AM', timeAgo: '5 hours ago', visitCount: 42,
-          products: [
-            { name: 'Beef Meat', variants: [{ label: '2kg', qty: 1 }] },
-            { name: 'Chicken', variants: [{ label: 'Whole', qty: 2 }] },
-            { name: 'Spices Mix', variants: [{ label: 'Pack', qty: 3 }] },
-            { name: 'Onions', variants: [{ label: '5kg', qty: 1 }] },
-          ],
-          total: 320.00
-        },
-      ]
-    },
-    {
-      id: 3, name: 'Sumaiya Akter', phone: '+8801912345678',
-      address: '12 Green Rd, Sylhet',
-      totalSpent: 85.00, totalOrders: 2,
-      orders: [
-        {
-          date: 'Jan 20, 2026', time: '4:00 PM', timeAgo: '1 month ago', visitCount: 8,
-          products: [
-            { name: 'Face Wash', variants: [{ label: '100ml', qty: 1 }] },
-            { name: 'Shampoo', variants: [{ label: '200ml', qty: 1 }] },
-          ],
-          total: 45.00
-        }
-      ]
-    }
-  ])
-  const [expandedCustomer, setExpandedCustomer] = useState<number | null>(null)
+  const [customerProfiles, setCustomerProfiles] = useState<CustomerProfile[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null)
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<CustomerProfile | null>(null)
 
-  const toggleCustomerExpand = (id: number) => {
-    setExpandedCustomer(expandedCustomer === id ? null : id)
+  // Fetch customers from API
+  const fetchCustomers = async () => {
+    setCustomersLoading(true)
+    try {
+      const res = await fetch('/api/customers')
+      const data = await res.json()
+      if (data.success && data.customers) {
+        const formatted: CustomerProfile[] = data.customers.map((cust: {
+          id: string
+          name: string
+          phone: string
+          address: string | null
+          email?: string
+          totalOrders: number
+          totalSpent: number
+          completedOrders: number
+          lastOrderDate: string | null
+          createdAt: string
+        }) => ({
+          id: cust.id,
+          name: cust.name,
+          phone: cust.phone,
+          address: cust.address || '',
+          email: cust.email || '',
+          totalOrders: cust.totalOrders,
+          totalSpent: cust.totalSpent,
+          completedOrders: cust.completedOrders,
+          pendingOrders: 0,
+          canceledOrders: 0,
+          lastOrderDate: cust.lastOrderDate,
+          createdAt: cust.createdAt
+        }))
+        setCustomerProfiles(formatted)
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error)
+      showToastMsg('Failed to load customers')
+    } finally {
+      setCustomersLoading(false)
+    }
+  }
+
+  // Fetch customer details with orders
+  const fetchCustomerDetails = async (customerId: string) => {
+    try {
+      const res = await fetch(`/api/customers/${customerId}`)
+      const data = await res.json()
+      if (data.success && data.customer) {
+        const cust = data.customer
+        const formatted: CustomerProfile = {
+          id: cust.id,
+          name: cust.name,
+          phone: cust.phone,
+          address: cust.address || '',
+          email: cust.email || '',
+          totalOrders: cust.totalOrders,
+          totalSpent: cust.totalSpent,
+          completedOrders: cust.completedOrders,
+          pendingOrders: cust.pendingOrders,
+          canceledOrders: cust.canceledOrders,
+          lastOrderDate: cust.lastOrderDate,
+          createdAt: cust.createdAt,
+          orders: cust.orders.map((order: {
+            id: string
+            orderNumber: string
+            date: string
+            status: string
+            courierStatus: string | null
+            paymentMethod: string
+            subtotal: number
+            deliveryCharge: number
+            discount: number
+            couponDiscount: number
+            total: number
+            items: Array<{
+              name: string
+              variety: string | null
+              quantity: number
+              basePrice: number
+              offerDiscount: number
+              couponDiscount: number
+              totalPrice: number
+            }>
+            couponCodes: Array<{ code: string; discount: number }>
+          }) => {
+            const orderDate = new Date(order.date)
+            return {
+              id: order.id,
+              orderNumber: order.orderNumber,
+              date: orderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: orderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+              timeAgo: getTimeAgo(order.date),
+              status: order.status,
+              courierStatus: order.courierStatus,
+              paymentMethod: order.paymentMethod,
+              subtotal: order.subtotal,
+              deliveryCharge: order.deliveryCharge,
+              discount: order.discount,
+              couponDiscount: order.couponDiscount,
+              total: order.total,
+              items: order.items,
+              couponCodes: order.couponCodes
+            }
+          })
+        }
+        setSelectedCustomerDetails(formatted)
+      }
+    } catch (error) {
+      console.error('Error fetching customer details:', error)
+    }
+  }
+
+  // Fetch customers on component mount
+  useEffect(() => {
+    fetchCustomers()
+  }, [])
+
+  // Fetch customers when dashView changes to customers
+  useEffect(() => {
+    if (dashView === 'customers') {
+      fetchCustomers()
+    }
+  }, [dashView])
+
+  const toggleCustomerExpand = (id: string) => {
+    if (expandedCustomer === id) {
+      setExpandedCustomer(null)
+      setSelectedCustomerDetails(null)
+    } else {
+      setExpandedCustomer(id)
+      setSelectedCustomerDetails(null)
+      fetchCustomerDetails(id)
+    }
   }
 
   // Settings State
@@ -2755,129 +2831,169 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               </span>
             </div>
             
+            {/* Loading State */}
+            {customersLoading && (
+              <div style={{padding: '3rem', textAlign: 'center', color: '#64748b'}}>
+                <i className="ri-loader-4-line" style={{fontSize: '2rem', animation: 'spin 1s linear infinite'}}></i>
+                <div style={{marginTop: '0.5rem'}}>Loading customers...</div>
+              </div>
+            )}
+            
+            {/* Empty State */}
+            {!customersLoading && customerProfiles.length === 0 && (
+              <div style={{padding: '3rem', textAlign: 'center', color: '#64748b'}}>
+                <i className="ri-user-line" style={{fontSize: '2rem', opacity: 0.5}}></i>
+                <div style={{marginTop: '0.5rem'}}>No customers found</div>
+                <div style={{fontSize: '0.8rem', marginTop: '0.25rem'}}>Customers will appear here when orders are placed</div>
+              </div>
+            )}
+            
             {/* Table */}
-            <div style={{overflowX: 'auto'}}>
-              <table style={{width: '100%', borderCollapse: 'collapse'}}>
-                <thead>
-                  <tr>
-                    <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Customer</th>
-                    <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Address</th>
-                    <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Overview</th>
-                    <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customerProfiles.map((cust) => (
-                    <React.Fragment key={cust.id}>
-                      {/* Main Row */}
-                      <tr 
-                        style={{cursor: 'pointer', transition: 'background 0.15s'}}
-                        onClick={() => toggleCustomerExpand(cust.id)}
-                        onMouseEnter={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '#f8fafc')}
-                        onMouseLeave={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = 'transparent')}>
-                        <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                          <div style={{display: 'flex', alignItems: 'center', gap: '0.7rem'}}>
-                            <div style={{
-                              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                              background: '#d1fae5', border: '1.5px solid #16a34a',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontWeight: 700, fontSize: '0.75rem', color: '#16a34a'
-                            }}>{getInitials(cust.name)}</div>
-                            <div>
-                              <div style={{fontWeight: 600, fontSize: '0.875rem', color: '#0f172a'}}>{cust.name}</div>
-                              <div style={{fontSize: '0.72rem', color: '#64748b', marginTop: '2px'}}>{cust.phone}</div>
+            {!customersLoading && customerProfiles.length > 0 && (
+              <div style={{overflowX: 'auto'}}>
+                <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                  <thead>
+                    <tr>
+                      <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Customer</th>
+                      <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Address</th>
+                      <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Overview</th>
+                      <th style={{width: '25%', textAlign: 'left', padding: '0.75rem 1.2rem', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'}}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerProfiles.map((cust) => (
+                      <React.Fragment key={cust.id}>
+                        {/* Main Row */}
+                        <tr 
+                          style={{cursor: 'pointer', transition: 'background 0.15s'}}
+                          onClick={() => toggleCustomerExpand(cust.id)}
+                          onMouseEnter={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '#f8fafc')}
+                          onMouseLeave={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = 'transparent')}>
+                          <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '0.7rem'}}>
+                              <div style={{
+                                width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                                background: '#d1fae5', border: '1.5px solid #16a34a',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontWeight: 700, fontSize: '0.75rem', color: '#16a34a'
+                              }}>{getInitials(cust.name)}</div>
+                              <div>
+                                <div style={{fontWeight: 600, fontSize: '0.875rem', color: '#0f172a'}}>{cust.name}</div>
+                                <div style={{fontSize: '0.72rem', color: '#64748b', marginTop: '2px'}}>{cust.phone}</div>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{padding: '0.9rem 1.2rem', fontSize: '0.83rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle', color: '#475569'}}>{cust.address}</td>
-                        <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                          <div style={{fontWeight: 500, fontSize: '0.83rem', color: '#0f172a'}}>Total {cust.totalOrders} Orders</div>
-                          <div style={{fontSize: '0.71rem', color: '#64748b', marginTop: '2px'}}>Spent ${cust.totalSpent.toFixed(2)}</div>
-                        </td>
-                        <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '0.5rem'}}>
-                            {/* Action Buttons */}
-                            <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem'}}>
-                              <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${cust.phone}`; }} 
-                                style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#d1fae5'; e.currentTarget.style.color = '#16a34a'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
-                                <i className="ri-phone-line"></i>
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); copyToClipboardLocal(cust.phone); }}
-                                style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
-                                <i className="ri-file-copy-line"></i>
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${cust.phone.replace('+', '')}`, '_blank'); }}
-                                style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#16a34a'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
-                                <i className="ri-whatsapp-line"></i>
-                              </button>
-                            </div>
-                            <i className="ri-arrow-down-s-line" style={{
-                              transition: 'transform 0.25s ease', fontSize: '1.2rem', color: '#64748b',
-                              transform: expandedCustomer === cust.id ? 'rotate(180deg)' : 'rotate(0deg)'
-                            }}></i>
-                          </div>
-                        </td>
-                      </tr>
-                      
-                      {/* Expand Row */}
-                      {expandedCustomer === cust.id && (
-                        <tr>
-                          <td colSpan={4} style={{padding: 0, background: '#ffffff', borderBottom: '1px solid #e2e8f0'}}>
-                            <div style={{padding: '1.2rem 1.4rem'}}>
-                              <table style={{width: '100%', borderCollapse: 'collapse'}}>
-                                <tbody>
-                                  {cust.orders.map((o, idx) => {
-                                    const entries = buildEntries(o.products)
-                                    const totalItems = entries.reduce((acc, e) => acc + e.qty, 0)
-                                    
-                                    return (
-                                      <tr key={idx} style={{cursor: 'pointer'}} onMouseEnter={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '#f8fafc')}>
-                                        <td style={{width: '20%', whiteSpace: 'nowrap', padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === cust.orders.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                                          <div style={{fontSize: '0.82rem', fontWeight: 600, color: '#0f172a'}}>{o.date}</div>
-                                          <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: '3px'}}>
-                                            Placed on <span style={{color: '#16a34a', fontWeight: 600}}>{o.visitCount}{getOrdinal(o.visitCount)}</span> visit
-                                          </div>
-                                        </td>
-                                        <td style={{padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === cust.orders.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                                          <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 0, lineHeight: 1.6}}>
-                                            {entries.map((e, i) => {
-                                              const isLast = i === entries.length - 1
-                                              const variantText = e.variant ? ` (${e.variant})` : ''
-                                              return (
-                                                <span key={i} style={{display: 'inline-flex', alignItems: 'baseline', gap: 0, fontSize: '0.81rem', color: '#475569'}}>
-                                                  <span style={{color: '#0f172a', fontWeight: 500}}>{e.name}</span>
-                                                  {e.variant && <span style={{color: '#64748b', fontSize: '0.75rem'}}>{variantText}</span>}
-                                                  <span style={{color: '#16a34a', fontWeight: 700, fontSize: '0.75rem', marginLeft: '0.15rem'}}> ×{e.qty}</span>
-                                                  {!isLast && <span style={{color: '#cbd5e1', margin: '0 0.6rem', fontSize: '0.8rem', opacity: 0.6}}>|</span>}
-                                                </span>
-                                              )
-                                            })}
-                                          </div>
-                                        </td>
-                                        <td style={{width: '15%', textAlign: 'right', padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === cust.orders.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
-                                          <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#16a34a'}}>${o.total.toFixed(2)}</div>
-                                          <div style={{fontSize: '0.68rem', color: '#64748b', marginTop: '2px'}}>(Total {totalItems} items)</div>
-                                        </td>
-                                      </tr>
-                                    )
-                                  })}
-                                </tbody>
-                              </table>
+                          </td>
+                          <td style={{padding: '0.9rem 1.2rem', fontSize: '0.83rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle', color: '#475569'}}>{cust.address || 'No address'}</td>
+                          <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                            <div style={{fontWeight: 500, fontSize: '0.83rem', color: '#0f172a'}}>Total {cust.totalOrders} Order{cust.totalOrders !== 1 ? 's' : ''}</div>
+                            <div style={{fontSize: '0.71rem', color: '#64748b', marginTop: '2px'}}>Spent TK{cust.totalSpent.toFixed(2)}</div>
+                          </td>
+                          <td style={{padding: '0.9rem 1.2rem', fontSize: '0.85rem', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '0.5rem'}}>
+                              {/* Action Buttons */}
+                              <div style={{display: 'flex', alignItems: 'center', gap: '0.6rem'}}>
+                                <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${cust.phone}`; }} 
+                                  style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#d1fae5'; e.currentTarget.style.color = '#16a34a'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
+                                  <i className="ri-phone-line"></i>
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); copyToClipboardLocal(cust.phone); }}
+                                  style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
+                                  <i className="ri-file-copy-line"></i>
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${cust.phone.replace(/\+/g, '')}`, '_blank'); }}
+                                  style={{width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#475569', background: '#f1f5f9', cursor: 'pointer', transition: 'all 0.2s', border: 'none'}}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#16a34a'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; }}>
+                                  <i className="ri-whatsapp-line"></i>
+                                </button>
+                              </div>
+                              <i className="ri-arrow-down-s-line" style={{
+                                transition: 'transform 0.25s ease', fontSize: '1.2rem', color: '#64748b',
+                                transform: expandedCustomer === cust.id ? 'rotate(180deg)' : 'rotate(0deg)'
+                              }}></i>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        
+                        {/* Expand Row */}
+                        {expandedCustomer === cust.id && (
+                          <tr>
+                            <td colSpan={4} style={{padding: 0, background: '#ffffff', borderBottom: '1px solid #e2e8f0'}}>
+                              <div style={{padding: '1.2rem 1.4rem'}}>
+                                {/* Loading orders */}
+                                {!selectedCustomerDetails && (
+                                  <div style={{textAlign: 'center', padding: '1rem', color: '#64748b'}}>
+                                    <i className="ri-loader-4-line" style={{animation: 'spin 1s linear infinite'}}></i>
+                                    <span style={{marginLeft: '0.5rem'}}>Loading orders...</span>
+                                  </div>
+                                )}
+                                
+                                {/* Orders list */}
+                                {selectedCustomerDetails && selectedCustomerDetails.orders && selectedCustomerDetails.orders.length > 0 && (
+                                  <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                                    <tbody>
+                                      {selectedCustomerDetails.orders.map((order, idx) => {
+                                        const totalItems = order.items.reduce((acc, item) => acc + item.quantity, 0)
+                                        
+                                        return (
+                                          <tr key={order.id} style={{cursor: 'pointer'}} onMouseEnter={(e) => e.currentTarget.querySelectorAll('td').forEach(td => td.style.background = '#f8fafc')}>
+                                            <td style={{width: '20%', whiteSpace: 'nowrap', padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === selectedCustomerDetails.orders!.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                                              <div style={{fontSize: '0.82rem', fontWeight: 600, color: '#0f172a'}}>{order.date}</div>
+                                              <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: '3px'}}>
+                                                {order.orderNumber} · <span style={{
+                                                  color: order.status === 'pending' ? '#f59e0b' : order.status === 'approved' ? '#16a34a' : '#ef4444',
+                                                  fontWeight: 600,
+                                                  textTransform: 'capitalize'
+                                                }}>{order.status}</span>
+                                              </div>
+                                            </td>
+                                            <td style={{padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === selectedCustomerDetails.orders!.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                                              <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 0, lineHeight: 1.6}}>
+                                                {order.items.map((item, i) => {
+                                                  const isLast = i === order.items.length - 1
+                                                  const variantText = item.variety ? ` (${item.variety})` : ''
+                                                  return (
+                                                    <span key={i} style={{display: 'inline-flex', alignItems: 'baseline', gap: 0, fontSize: '0.81rem', color: '#475569'}}>
+                                                      <span style={{color: '#0f172a', fontWeight: 500}}>{item.name}</span>
+                                                      {item.variety && <span style={{color: '#64748b', fontSize: '0.75rem'}}>{variantText}</span>}
+                                                      <span style={{color: '#16a34a', fontWeight: 700, fontSize: '0.75rem', marginLeft: '0.15rem'}}> ×{item.quantity}</span>
+                                                      {!isLast && <span style={{color: '#cbd5e1', margin: '0 0.6rem', fontSize: '0.8rem', opacity: 0.6}}>|</span>}
+                                                    </span>
+                                                  )
+                                                })}
+                                              </div>
+                                            </td>
+                                            <td style={{width: '15%', textAlign: 'right', padding: '0.95rem 1rem', fontSize: '0.82rem', borderBottom: idx === selectedCustomerDetails.orders!.length - 1 ? 'none' : '1px solid #e2e8f0', verticalAlign: 'middle'}}>
+                                              <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#16a34a'}}>TK{order.total.toFixed(2)}</div>
+                                              <div style={{fontSize: '0.68rem', color: '#64748b', marginTop: '2px'}}>({totalItems} item{totalItems !== 1 ? 's' : ''})</div>
+                                            </td>
+                                          </tr>
+                                        )
+                                      })}
+                                    </tbody>
+                                  </table>
+                                )}
+                                
+                                {/* No orders */}
+                                {selectedCustomerDetails && (!selectedCustomerDetails.orders || selectedCustomerDetails.orders.length === 0) && (
+                                  <div style={{textAlign: 'center', padding: '1rem', color: '#64748b'}}>
+                                    No orders found for this customer
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
