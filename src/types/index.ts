@@ -51,12 +51,14 @@ export interface Product {
 
 // Inventory Types
 export interface InventoryItem {
-  id: number
+  id: string | number
   name: string
   category: string
   image: string
-  variants: { name: string; stock: number; initialStock: number }[]
+  variants: { id?: string; name: string; stock: number; initialStock: number }[]
   lastEdited: string
+  totalStock?: number
+  lowStockVarieties?: number
 }
 
 // Alert Types

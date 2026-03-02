@@ -24,18 +24,99 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   const [dashView, setDashView] = useState('overview')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
-  const [inventory, setInventory] = useState<InventoryItem[]>([
-    { id: 1, name: "Fresh Carrots", category: "Vegetables", image: "https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png", variants: [{ name: "250g", stock: 45, initialStock: 100 }, { name: "500g", stock: 32, initialStock: 80 }, { name: "1 KG", stock: 18, initialStock: 50 }], lastEdited: "Feb 25, 2026" },
-    { id: 2, name: "Premium Potatoes", category: "Vegetables", image: "https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png", variants: [{ name: "500g", stock: 28, initialStock: 60 }, { name: "1 KG", stock: 55, initialStock: 100 }, { name: "2 KG", stock: 12, initialStock: 30 }], lastEdited: "Feb 24, 2026" },
-    { id: 3, name: "Fresh Tomatoes", category: "Vegetables", image: "https://i.postimg.cc/mr7CkxtQ/1000020584-removebg-preview.png", variants: [{ name: "250g", stock: 8, initialStock: 40 }, { name: "500g", stock: 15, initialStock: 50 }, { name: "1 KG", stock: 22, initialStock: 60 }], lastEdited: "Feb 23, 2026" },
-    { id: 4, name: "Red Apples", category: "Fruits", image: "https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png", variants: [{ name: "500g", stock: 35, initialStock: 80 }, { name: "1 KG", stock: 48, initialStock: 100 }], lastEdited: "Feb 22, 2026" },
-    { id: 5, name: "Fresh Bananas", category: "Fruits", image: "https://i.postimg.cc/bw71qYYK/IMG-20260228-163147.png", variants: [{ name: "6 pcs", stock: 42, initialStock: 80 }, { name: "1 Dozen", stock: 28, initialStock: 50 }], lastEdited: "Feb 21, 2026" },
-    { id: 6, name: "Organic Spinach", category: "Vegetables", image: "https://i.postimg.cc/MG1VHkvz/1000020586-removebg-preview.png", variants: [{ name: "1 Bundle", stock: 5, initialStock: 25 }], lastEdited: "Feb 20, 2026" },
-    { id: 7, name: "Sweet Oranges", category: "Fruits", image: "https://i.postimg.cc/mr7Ckxtx/IMG-20260228-163156.png", variants: [{ name: "500g", stock: 30, initialStock: 70 }, { name: "1 KG", stock: 45, initialStock: 80 }], lastEdited: "Feb 19, 2026" },
-    { id: 8, name: "Grapes Green", category: "Fruits", image: "https://i.postimg.cc/htkVK4PD/IMG-20260228-163208.png", variants: [{ name: "250g", stock: 3, initialStock: 20 }, { name: "500g", stock: 18, initialStock: 40 }], lastEdited: "Feb 18, 2026" },
-  ])
-  const [expandedInventory, setExpandedInventory] = useState<number | null>(null)
+  // Inventory Management State
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [inventoryLoading, setInventoryLoading] = useState(false)
+  const [inventoryStats, setInventoryStats] = useState({
+    totalProducts: 0,
+    totalVarieties: 0,
+    totalStock: 0,
+    lowStockCount: 0
+  })
+  const [expandedInventory, setExpandedInventory] = useState<string | null>(null)
   const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItem | null>(null)
+
+  // Fetch inventory from database
+  const fetchInventory = async () => {
+    setInventoryLoading(true)
+    try {
+      const res = await fetch('/api/inventory')
+      const data = await res.json()
+      if (data.success && data.inventory) {
+        const formattedInventory: InventoryItem[] = data.inventory.map((item: {
+          id: string
+          name: string
+          category: string
+          image: string | null
+          varieties: Array<{ id: string; name: string; stock: number; price: number; discount: string | null }>
+          totalStock: number
+          lowStockVarieties: number
+          lastEdited: string
+        }) => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          image: item.image || '',
+          variants: item.varieties.map(v => ({
+            id: v.id,
+            name: v.name,
+            stock: v.stock,
+            initialStock: v.stock // Use current stock as initial for display
+          })),
+          totalStock: item.totalStock,
+          lowStockVarieties: item.lowStockVarieties,
+          lastEdited: formatTimeAgo(item.lastEdited)
+        }))
+        setInventory(formattedInventory)
+        setInventoryStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Error fetching inventory:', error)
+      showToastMsg('Failed to load inventory')
+    } finally {
+      setInventoryLoading(false)
+    }
+  }
+
+  // Update stock for inventory item
+  const updateInventoryStock = async (item: InventoryItem) => {
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: item.id,
+          varieties: item.variants.map(v => ({
+            id: v.id,
+            stock: v.stock
+          }))
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Stock updated successfully!')
+        fetchInventory()
+        setEditingInventoryItem(null)
+      } else {
+        showToastMsg(data.error || 'Failed to update stock')
+      }
+    } catch (error) {
+      console.error('Error updating inventory:', error)
+      showToastMsg('Failed to update stock')
+    }
+  }
+
+  // Fetch inventory on component mount
+  useEffect(() => {
+    fetchInventory()
+  }, [])
+
+  // Fetch inventory when dashView changes to inventory
+  useEffect(() => {
+    if (dashView === 'inventory') {
+      fetchInventory()
+    }
+  }, [dashView])
 
   const [alerts] = useState<Alert[]>([
     { title: "Low Stock Alert", desc: "Sourdough Loaf is running low.", type: "danger" },
@@ -3011,7 +3092,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               </div>
               <div>
                 <div style={{fontSize: '11px', color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Products</div>
-                <div style={{fontSize: '20px', fontWeight: 700, color: '#1c2333'}}>{inventory.length}</div>
+                <div style={{fontSize: '20px', fontWeight: 700, color: '#1c2333'}}>{inventoryStats.totalProducts}</div>
               </div>
             </div>
             <div className="prod-order-card" style={{padding: '16px', display: 'flex', alignItems: 'center', gap: '12px'}}>
@@ -3020,7 +3101,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               </div>
               <div>
                 <div style={{fontSize: '11px', color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Varieties</div>
-                <div style={{fontSize: '20px', fontWeight: 700, color: '#1c2333'}}>{inventory.reduce((acc, i) => acc + i.variants.length, 0)}</div>
+                <div style={{fontSize: '20px', fontWeight: 700, color: '#1c2333'}}>{inventoryStats.totalVarieties}</div>
               </div>
             </div>
             <div className="prod-order-card" style={{padding: '16px', display: 'flex', alignItems: 'center', gap: '12px'}}>
@@ -3029,7 +3110,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               </div>
               <div>
                 <div style={{fontSize: '11px', color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Stock</div>
-                <div style={{fontSize: '20px', fontWeight: 700, color: '#16a34a'}}>{inventory.reduce((acc, i) => acc + i.variants.reduce((vAcc, v) => vAcc + v.stock, 0), 0)}</div>
+                <div style={{fontSize: '20px', fontWeight: 700, color: '#16a34a'}}>{inventoryStats.totalStock}</div>
               </div>
             </div>
             <div className="prod-order-card" style={{padding: '16px', display: 'flex', alignItems: 'center', gap: '12px'}}>
@@ -3038,75 +3119,99 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               </div>
               <div>
                 <div style={{fontSize: '11px', color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Low Stock</div>
-                <div style={{fontSize: '20px', fontWeight: 700, color: '#ef4444'}}>{inventory.filter(i => i.variants.some(v => v.stock < 10)).length}</div>
+                <div style={{fontSize: '20px', fontWeight: 700, color: '#ef4444'}}>{inventoryStats.lowStockCount}</div>
               </div>
             </div>
           </div>
 
-          {/* Inventory Table - Matching Product Section Design */}
-          <div className="prod-container">
-            <div className="inv-table-header">
-              <div className="inv-grid-row">
-                <div>Product Name</div>
-                <div>Varieties</div>
-                <div>Stock</div>
-                <div>Last Edited</div>
-                <div>Action</div>
-              </div>
+          {/* Loading State */}
+          {inventoryLoading && (
+            <div className="prod-order-card" style={{padding: '3rem', textAlign: 'center', color: '#8a96a8'}}>
+              <i className="ri-loader-4-line" style={{fontSize: '2rem', animation: 'spin 1s linear infinite'}}></i>
+              <div style={{marginTop: '0.5rem'}}>Loading inventory...</div>
             </div>
-            {inventory.map((item) => {
-              const totalStock = item.variants.reduce((acc, v) => acc + v.stock, 0)
-              const totalInitialStock = item.variants.reduce((acc, v) => acc + v.initialStock, 0)
-              const isExpanded = expandedInventory === item.id
-              
-              return (
-                <React.Fragment key={item.id}>
-                  <div 
-                    className="prod-order-card product-row"
-                    style={{cursor: 'pointer'}}
-                    onClick={() => setExpandedInventory(isExpanded ? null : item.id)}
-                  >
-                    <div className="inv-grid-row">
-                      <div className="product-cell" style={{justifyContent: 'center'}}>
-                        <img src={item.image} alt={item.name} className="inv-product-img" />
-                        <div className="product-info">
-                          <span className="product-name">{item.name}</span>
-                          <span className="product-cat">{item.category}</span>
+          )}
+
+          {/* Empty State */}
+          {!inventoryLoading && inventory.length === 0 && (
+            <div className="prod-order-card" style={{padding: '3rem', textAlign: 'center', color: '#8a96a8'}}>
+              <i className="ri-archive-line" style={{fontSize: '2rem', opacity: 0.5}}></i>
+              <div style={{marginTop: '0.5rem'}}>No products in inventory</div>
+              <div style={{fontSize: '0.8rem', marginTop: '0.25rem'}}>Add products to see inventory here</div>
+            </div>
+          )}
+
+          {/* Inventory Table - Matching Product Section Design */}
+          {!inventoryLoading && inventory.length > 0 && (
+            <div className="prod-container">
+              <div className="inv-table-header">
+                <div className="inv-grid-row">
+                  <div>Product Name</div>
+                  <div>Varieties</div>
+                  <div>Stock</div>
+                  <div>Last Edited</div>
+                  <div>Action</div>
+                </div>
+              </div>
+              {inventory.map((item) => {
+                const totalStock = item.variants.reduce((acc, v) => acc + v.stock, 0)
+                const isExpanded = expandedInventory === item.id
+                
+                return (
+                  <React.Fragment key={item.id}>
+                    <div 
+                      className="prod-order-card product-row"
+                      style={{cursor: 'pointer'}}
+                      onClick={() => setExpandedInventory(isExpanded ? null : String(item.id))}
+                    >
+                      <div className="inv-grid-row">
+                        <div className="product-cell" style={{justifyContent: 'center'}}>
+                          <img src={item.image} alt={item.name} className="inv-product-img" />
+                          <div className="product-info">
+                            <span className="product-name">{item.name}</span>
+                            <span className="product-cat">{item.category}</span>
+                          </div>
+                        </div>
+                        <div className="bracket-text text-blue">[{item.variants.length} varieties]</div>
+                        <div className="bracket-text text-muted-val">[{totalStock} in stock]</div>
+                        <div className="text-muted-val">{item.lastEdited}</div>
+                        <div className="inv-action-btns">
+                          <button className="inv-btn-edit" onClick={(e) => { e.stopPropagation(); setEditingInventoryItem(item); }}>Edit</button>
+                          <button className="inv-btn-delete" onClick={(e) => { e.stopPropagation(); handleDeleteProduct(String(item.id)); }}>Delete</button>
                         </div>
                       </div>
-                      <div className="bracket-text text-blue">[{item.variants.length} varieties]</div>
-                      <div className="bracket-text text-muted-val">[{totalStock} of {totalInitialStock}]</div>
-                      <div className="text-muted-val">{item.lastEdited}</div>
-                      <div className="inv-action-btns">
-                        <button className="inv-btn-edit" onClick={(e) => { e.stopPropagation(); setEditingInventoryItem(item); }}>Edit</button>
-                        <button className="inv-btn-delete" onClick={(e) => { e.stopPropagation(); setInventory(inventory.filter(i => i.id !== item.id)); }}>Delete</button>
-                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Expanded Variants */}
-                  {isExpanded && (
-                    <div className="prod-order-card" style={{background: '#f8fafc', padding: '16px 20px 16px 70px'}}>
-                      <div style={{fontSize: '11px', fontWeight: 600, color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'}}>Varieties Stock Details</div>
-                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px'}}>
-                        {item.variants.map((variant, vIndex) => (
-                          <div 
-                            key={vIndex}
-                            style={{padding: '10px 12px', background: 'white', borderRadius: '8px', border: '1px solid #e4e7ee'}}
-                          >
-                            <div style={{fontSize: '11px', color: '#64748b', marginBottom: '4px'}}>{variant.name}</div>
-                            <div style={{fontSize: '13px', fontWeight: 600, color: '#1c2333'}}>
-                              {variant.stock} <span style={{fontSize: '11px', fontWeight: 400, color: '#8a96a8'}}>of {variant.initialStock}</span>
+                    
+                    {/* Expanded Variants */}
+                    {isExpanded && (
+                      <div className="prod-order-card" style={{background: '#f8fafc', padding: '16px 20px 16px 70px'}}>
+                        <div style={{fontSize: '11px', fontWeight: 600, color: '#8a96a8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px'}}>Varieties Stock Details</div>
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px'}}>
+                          {item.variants.map((variant, vIndex) => (
+                            <div 
+                              key={vIndex}
+                              style={{
+                                padding: '10px 12px',
+                                background: 'white',
+                                borderRadius: '8px',
+                                border: `1px solid ${variant.stock < 10 ? '#ef4444' : '#e4e7ee'}`
+                              }}
+                            >
+                              <div style={{fontSize: '11px', color: '#64748b', marginBottom: '4px'}}>{variant.name}</div>
+                              <div style={{fontSize: '13px', fontWeight: 600, color: variant.stock < 10 ? '#ef4444' : '#1c2333'}}>
+                                {variant.stock} <span style={{fontSize: '11px', fontWeight: 400, color: '#8a96a8'}}>units</span>
+                                {variant.stock < 10 && <span style={{fontSize: '10px', color: '#ef4444', marginLeft: '4px'}}>Low!</span>}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </React.Fragment>
-              )
-            })}
-          </div>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
+          )}
           
           {/* Inventory Edit Modal */}
           {editingInventoryItem && (
@@ -3125,7 +3230,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                     <div key={idx} className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-lg">
                       <div>
                         <div className="font-medium text-[#1c2333]">{variant.name}</div>
-                        <div className="text-[11px] text-[#8a96a8]">Variety: {variant.initialStock}</div>
+                        <div className="text-[11px] text-[#8a96a8]">Current stock: {variant.stock} units</div>
                       </div>
                       <input 
                         type="number"
@@ -3149,11 +3254,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                     Cancel
                   </button>
                   <button 
-                    onClick={() => {
-                      setInventory(inventory.map(i => i.id === editingInventoryItem.id ? editingInventoryItem : i));
-                      setEditingInventoryItem(null);
-                      showToastMsg('Stock updated successfully!');
-                    }}
+                    onClick={() => updateInventoryStock(editingInventoryItem)}
                     className="flex-1 px-4 py-2 bg-[#16a34a] text-white rounded-lg font-semibold hover:bg-[#15803d] transition-colors"
                   >
                     Save Changes
