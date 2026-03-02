@@ -57,14 +57,58 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   const [newProduct, setNewProduct] = useState({ name: '', stock: '' })
 
   // Category Management State
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 'CAT-101', name: 'Organic Fruits', type: 'icon', icon: 'ri-leaf-line', image: '', items: 24, created: '2 days ago', status: 'Active' },
-    { id: 'CAT-102', name: 'Daily Essentials', type: 'icon', icon: 'ri-basket-line', image: '', items: 12, created: '5 days ago', status: 'Hidden' },
-    { id: 'CAT-103', name: 'Fresh Vegetables', type: 'image', icon: '', image: 'https://i.postimg.cc/mr7CkxtQ/1000020584-removebg-preview.png', items: 36, created: '1 week ago', status: 'Active' }
-  ])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+
+  // Fetch categories from database
+  const fetchCategories = async () => {
+    setCategoriesLoading(true)
+    try {
+      const res = await fetch('/api/categories')
+      const data = await res.json()
+      if (data.success && data.categories) {
+        const formattedCategories: Category[] = data.categories.map((cat: {id: string; name: string; type: string; icon: string | null; image: string | null; status: string; createdAt: string}) => ({
+          id: cat.id,
+          name: cat.name,
+          type: cat.type || 'icon',
+          icon: cat.icon || '',
+          image: cat.image || '',
+          items: 0, // Will be calculated when products are added
+          created: formatTimeAgo(cat.createdAt),
+          status: cat.status === 'active' ? 'Active' : 'Hidden'
+        }))
+        setCategories(formattedCategories)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      showToastMsg('Failed to load categories')
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }
+
+  // Format date to time ago
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Just now'
+    if (diffDays === 1) return '1 day ago'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 14) return '1 week ago'
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`
+  }
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategories()
+  }, [])
 
   // Product Management State
   const [products, setProducts] = useState<Product[]>([
@@ -108,27 +152,84 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
       setEditingCategory({ ...cat, type: cat.type })
     } else {
       setEditingCategory({
-        id: 'CAT-' + Math.floor(Math.random() * 1000), name: '', type: 'icon', icon: '', image: '', items: 0, created: 'Just now', status: 'Active'
+        id: '', name: '', type: 'icon', icon: '', image: '', items: 0, created: 'Just now', status: 'Active'
       })
     }
   }
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!editingCategory?.name) { showToastMsg('Please enter a category name'); return }
-    const exists = categories.find(c => c.id === editingCategory.id)
-    let updatedCategories
-    if (exists) {
-      updatedCategories = categories.map(c => c.id === editingCategory.id ? { ...editingCategory } : c)
-    } else {
-      updatedCategories = [...categories, { ...editingCategory }]
+    
+    const isNewCategory = !editingCategory.id || editingCategory.id === ''
+    
+    try {
+      if (isNewCategory) {
+        // Create new category
+        const res = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: editingCategory.name,
+            type: editingCategory.type,
+            icon: editingCategory.type === 'icon' ? editingCategory.icon : null,
+            image: editingCategory.type === 'image' ? editingCategory.image : null,
+            status: editingCategory.status === 'Active' ? 'active' : 'hidden'
+          })
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Category Created Successfully!')
+          fetchCategories()
+          setEditingCategory(null)
+        } else {
+          showToastMsg(data.error || 'Failed to create category')
+        }
+      } else {
+        // Update existing category
+        const res = await fetch(`/api/categories/${editingCategory.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: editingCategory.name,
+            type: editingCategory.type,
+            icon: editingCategory.type === 'icon' ? editingCategory.icon : null,
+            image: editingCategory.type === 'image' ? editingCategory.image : null,
+            status: editingCategory.status === 'Active' ? 'active' : 'hidden'
+          })
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Category Updated Successfully!')
+          fetchCategories()
+          setEditingCategory(null)
+        } else {
+          showToastMsg(data.error || 'Failed to update category')
+        }
+      }
+    } catch (error) {
+      console.error('Error saving category:', error)
+      showToastMsg('Failed to save category')
     }
-    setCategories(updatedCategories)
-    setEditingCategory(null)
-    showToastMsg('Category Updated Successfully!')
   }
 
-  const handleDeleteCategory = (id: string) => {
-    if(confirm("Delete this category?")) setCategories(categories.filter(c => c.id !== id))
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm("Delete this category?")) return
+    
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Category Deleted Successfully!')
+        fetchCategories()
+      } else {
+        showToastMsg(data.error || 'Failed to delete category')
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      showToastMsg('Failed to delete category')
+    }
   }
 
   // Product Functions
@@ -1285,7 +1386,18 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
               <div className="order-card table-header">
                 <div className="order-grid-row"><div>Category</div><div>Source</div><div>Products</div><div>Created</div><div>Status</div><div>Manage</div></div>
               </div>
-              {categories.map((cat) => (
+              {categoriesLoading ? (
+                <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                  <i className="ri-loader-4-line" style={{fontSize: '24px', animation: 'spin 1s linear infinite'}}></i>
+                  <p style={{marginTop: '8px'}}>Loading categories...</p>
+                </div>
+              ) : categories.length === 0 ? (
+                <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                  <i className="ri-folder-line" style={{fontSize: '32px'}}></i>
+                  <p style={{marginTop: '8px'}}>No categories found. Click "Add Category" to create one.</p>
+                </div>
+              ) : (
+                categories.map((cat) => (
                 <div key={cat.id} className="order-card category-row">
                   <div className="order-grid-row">
                     <div className="category-name-cell">
@@ -1304,7 +1416,8 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           )}
         </div>
