@@ -185,6 +185,8 @@ model Order {
   status          String   @default("pending") // "pending", "approved", "canceled"
   courierStatus   String?  // "Processing", "Shipping", "Delivered", "Canceled"
   canceledBy      String?  // "Admin", "Customer"
+  consignmentId   String?  // Steadfast consignment ID
+  trackingCode    String?  // Steadfast tracking code
   subtotal        Float
   deliveryCharge  Float    @default(0)
   discount        Float    @default(0)

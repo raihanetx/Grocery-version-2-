@@ -6,6 +6,7 @@ import { CartItem } from '@/types'
 interface ShopProps {
   setView: (v: string) => void
   addToCart: (item: CartItem) => void
+  setSelectedProductId: (id: string) => void
 }
 
 interface CategoryData {
@@ -36,7 +37,7 @@ interface ProductData {
   category: { id: string; name: string } | null
 }
 
-const Shop = ({ setView, addToCart }: ShopProps) => {
+const Shop = ({ setView, addToCart, setSelectedProductId }: ShopProps) => {
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [products, setProducts] = useState<ProductData[]>([])
@@ -238,7 +239,10 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
                   <div 
                     key={product.id} 
                     className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] transition-all shrink-0 w-[240px] h-[100px] cursor-pointer hover:shadow-md" 
-                    onClick={() => setView('product')}
+                    onClick={() => {
+                      setSelectedProductId(product.id)
+                      setView('product')
+                    }}
                   >
                     <div className="w-[80px] h-full flex justify-center items-center p-2 pl-6">
                       <img 
@@ -296,7 +300,10 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
                 return (
                   <div 
                     key={product.id} 
-                    onClick={() => setView('product')} 
+                    onClick={() => {
+                      setSelectedProductId(product.id)
+                      setView('product')
+                    }} 
                     className="bg-white p-3 shadow-sm relative cursor-pointer transition-all duration-300 flex flex-col w-full min-h-[250px] border border-gray-200 rounded-2xl hover:shadow-lg"
                   >
                     {discount > 0 && (

@@ -173,9 +173,26 @@ body {
 .chk-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #a0a0a0; font-size: 1.1rem; transition: color 0.3s ease; z-index: 2; pointer-events: none; }
 .chk-clean-input { width: 100%; padding: 13px 15px 13px 44px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem; color: #222; background: transparent; outline: none; transition: border-color 0.3s ease; }
 .chk-clean-input:focus { border-color: #FF7F32; box-shadow: none; }
-.chk-input-label { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); background-color: transparent; color: #999; font-size: 0.95rem; pointer-events: none; }
-.chk-input-label.active-label { background-color: #ffffff; padding: 0 4px; font-weight: 600; color: #FF7F32; z-index: 5; }
+.chk-input-label { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); background-color: transparent; color: #999; font-size: 0.95rem; pointer-events: none; transition: all 0.2s ease; }
+.chk-input-label.active-label { top: 0; transform: translateY(-50%); background-color: #ffffff; padding: 0 4px; font-weight: 600; color: #FF7F32; z-index: 5; font-size: 0.8rem; left: 40px; }
 .chk-clean-input:focus ~ .chk-input-icon { color: #FF7F32; }
+.chk-coupon-wrapper { display: flex; gap: 10px; align-items: flex-start; }
+.chk-coupon-wrapper .chk-input-wrapper { flex: 1; margin-bottom: 0; }
+.chk-btn-apply { 
+  background: transparent; 
+  border: 1.5px solid #FF7F32; 
+  color: #FF7F32; 
+  border-radius: 8px; 
+  padding: 13px 20px; 
+  font-weight: 600; 
+  font-size: 0.9rem; 
+  cursor: pointer; 
+  transition: all 0.2s; 
+  white-space: nowrap;
+}
+.chk-btn-apply:hover { background: #FF7F32; color: white; }
+.chk-btn-apply:disabled { opacity: 0.5; cursor: not-allowed; }
+.chk-btn-apply:disabled:hover { background: transparent; color: #FF7F32; }
 .chk-row-inputs { display: flex; gap: 15px; }
 .chk-row-inputs .chk-input-wrapper { flex: 1; }
 .chk-product-row { display: flex; align-items: center; margin-bottom: 15px; }

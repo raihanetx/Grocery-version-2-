@@ -44,14 +44,71 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   ])
 
   // Reviews Management State
-  const [adminReviews, setAdminReviews] = useState<AdminReview[]>([
-    { id: 1, product: 'Fresh Carrots', productCategory: 'Vegetables', productImg: 'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png', customerName: 'Joya Parvin', rating: 5, text: 'Super fresh! My kids loved them. Will definitely order again.', date: 'Feb 24, 2026', time: '3:42 PM' },
-    { id: 2, product: 'Premium Potatoes', productCategory: 'Vegetables', productImg: 'https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png', customerName: 'Ahmed Rahman', rating: 4, text: 'Good quality but delivery took time. Product was fresh though.', date: 'Feb 23, 2026', time: '1:15 PM' },
-    { id: 3, product: 'Red Apples', productCategory: 'Fruits', productImg: 'https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png', customerName: 'Fatima Khatun', rating: 5, text: 'Best apples I have ever had! Sweet and crispy.', date: 'Feb 22, 2026', time: '10:30 AM' },
-    { id: 4, product: 'Fresh Tomatoes', productCategory: 'Vegetables', productImg: 'https://i.postimg.cc/mr7CkxtQ/1000020584-removebg-preview.png', customerName: 'Karim Uddin', rating: 2, text: 'Some tomatoes were damaged. Not happy with packaging.', date: 'Feb 21, 2026', time: '5:00 PM' },
-    { id: 5, product: 'Organic Spinach', productCategory: 'Vegetables', productImg: 'https://i.postimg.cc/MG1VHkvz/1000020586-removebg-preview.png', customerName: 'Nasreen Akter', rating: 4, text: 'Very fresh and organic as promised. Recommended!', date: 'Feb 20, 2026', time: '11:20 AM' },
-    { id: 6, product: 'Fresh Carrots', productCategory: 'Vegetables', productImg: 'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png', customerName: 'Rafiq Islam', rating: 3, text: 'Average quality. Expected better for the price.', date: 'Feb 19, 2026', time: '2:45 PM' },
-  ])
+  const [adminReviews, setAdminReviews] = useState<AdminReview[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+
+  // Fetch reviews from database
+  const fetchReviews = async () => {
+    setReviewsLoading(true)
+    try {
+      const res = await fetch('/api/reviews')
+      const data = await res.json()
+      if (data.success && data.reviews) {
+        const formattedReviews: AdminReview[] = data.reviews.map((rev: {
+          id: string
+          customerName: string
+          rating: number
+          text: string
+          createdAt: string
+          product: {
+            id: string
+            name: string
+            image: string | null
+            category: { name: string } | null
+          }
+        }) => {
+          const date = new Date(rev.createdAt)
+          return {
+            id: rev.id,
+            product: rev.product?.name || 'Unknown Product',
+            productCategory: rev.product?.category?.name || 'Uncategorized',
+            productImg: rev.product?.image || '',
+            customerName: rev.customerName,
+            rating: rev.rating,
+            text: rev.text,
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+          }
+        })
+        setAdminReviews(formattedReviews)
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
+
+  // Delete review from database
+  const deleteReview = async (id: string) => {
+    if (!confirm('Delete this review?')) return
+    
+    try {
+      const res = await fetch(`/api/reviews/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Review deleted successfully!')
+        fetchReviews()
+      } else {
+        showToastMsg(data.error || 'Failed to delete review')
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error)
+      showToastMsg('Failed to delete review')
+    }
+  }
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newProduct, setNewProduct] = useState({ name: '', stock: '' })
@@ -110,25 +167,96 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     fetchCategories()
   }, [])
 
+  // Fetch reviews on component mount
+  useEffect(() => {
+    fetchReviews()
+  }, [])
+
+  // Fetch reviews when dashView changes to reviews
+  useEffect(() => {
+    if (dashView === 'reviews') {
+      fetchReviews()
+    }
+  }, [dashView])
+
   // Product Management State
-  const [products, setProducts] = useState<Product[]>([
-    { id: 1, name: 'Fresh Carrots', category: 'Vegetables', image: 'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png', variants: '2 variants', price: 'TK80 – TK150', discount: '16%', offer: true, status: 'active' },
-    { id: 2, name: 'Premium Potatoes', category: 'Vegetables', image: 'https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png', variants: '1 variant', price: 'TK45', discount: '0%', offer: false, status: 'active' },
-    { id: 3, name: 'Red Apples', category: 'Fruits', image: 'https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png', variants: '3 variants', price: 'TK90 – TK170', discount: '18%', offer: true, status: 'inactive' }
-  ])
+  const [products, setProducts] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [prodVarieties, setProdVarieties] = useState<ProductVariety[]>([])
   const [prodFaqs, setProdFaqs] = useState<ProductFaq[]>([])
   const [prodImages, setProdImages] = useState<string[]>([])
   const [prodRelated, setProdRelated] = useState<number[]>([])
   const [relatedSearch, setRelatedSearch] = useState('')
+
+  // Fetch products from database
+  const fetchProducts = async () => {
+    setProductsLoading(true)
+    try {
+      const res = await fetch('/api/products?all=true')
+      const data = await res.json()
+      if (data.success && data.products) {
+        const formattedProducts: Product[] = data.products.map((prod: {
+          id: string;
+          name: string;
+          categoryId: string | null;
+          category: { name: string } | null;
+          image: string | null;
+          shortDesc: string | null;
+          longDesc: string | null;
+          isOffer: boolean;
+          status: string;
+          varieties: { name: string; price: number; stock: number; discount: string | null }[];
+        }) => {
+          // Calculate price range
+          const prices = prod.varieties?.map((v) => v.price) || []
+          const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+          const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
+          const priceStr = prices.length > 1 ? `TK${minPrice} – TK${maxPrice}` : prices.length === 1 ? `TK${minPrice}` : 'TK0'
+          
+          // Calculate discount
+          const discounts = prod.varieties?.map((v) => v.discount).filter((d): d is string => Boolean(d)) || []
+          const discountStr = discounts.length > 0 ? discounts[0] : '0%'
+
+          return {
+            id: prod.id,
+            name: prod.name,
+            category: prod.category?.name || 'Uncategorized',
+            categoryId: prod.categoryId || undefined,
+            image: prod.image || '',
+            variants: `${prod.varieties?.length || 0} variant${(prod.varieties?.length || 0) !== 1 ? 's' : ''}`,
+            price: priceStr,
+            discount: discountStr,
+            offer: prod.isOffer,
+            status: prod.status || 'active',
+            shortDesc: prod.shortDesc || '',
+            longDesc: prod.longDesc || '',
+            offerSwitch: prod.isOffer
+          }
+        })
+        setProducts(formattedProducts)
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      showToastMsg('Failed to load products')
+    } finally {
+      setProductsLoading(false)
+    }
+  }
+
+  // Fetch products on component mount
+  useEffect(() => {
+    fetchProducts()
+  }, [])
   
-  const allRelatedOptions = [
-    {id:1,name:'Organic Bananas',category:'Fruits',price:2.50,image:'https://via.placeholder.com/80/FFC107/FFFFFF?text=B'},
-    {id:2,name:'Whole Milk 1L',category:'Dairy',price:3.20,image:'https://via.placeholder.com/80/3B82F6/FFFFFF?text=M'},
-    {id:3,name:'Brown Eggs',category:'Dairy',price:4.99,image:'https://via.placeholder.com/80/F97316/FFFFFF?text=E'},
-    {id:4,name:'Wheat Bread',category:'Bakery',price:2.80,image:'https://via.placeholder.com/80/A16207/FFFFFF?text=B'},
-  ]
+  // Derive related products options from actual products in database
+  const allRelatedOptions = products.map(p => ({
+    id: parseInt(p.id?.toString().slice(-6) || '0', 16) || 0,
+    name: p.name || '',
+    category: p.category?.name || 'Uncategorized',
+    price: p.varieties?.[0]?.price || 0,
+    image: p.image || ''
+  }))
 
   const handleAddProductInventory = (e: React.FormEvent) => {
     e.preventDefault()
@@ -262,38 +390,271 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   }
 
   // Product Functions
-  const openProductEdit = (prod: Product | null = null) => {
+  const openProductEdit = async (prod: Product | null = null) => {
     if (prod) {
-      setEditingProduct({ ...prod, shortDesc: 'Fresh and crispy...', longDesc: '', offerSwitch: prod.offer })
+      // First set basic info from the list
+      setEditingProduct({ 
+        ...prod, 
+        shortDesc: '', 
+        longDesc: '', 
+        offerSwitch: prod.offer 
+      })
+      setProdVarieties([])
+      setProdFaqs([])
+      setProdImages([])
+      
+      // Fetch product details including varieties, descriptions, FAQs
+      try {
+        const res = await fetch(`/api/products/${prod.id}`)
+        const data = await res.json()
+        if (data.success && data.product) {
+          const productData = data.product
+          
+          // Update editingProduct with actual data from database
+          setEditingProduct({
+            id: productData.id,
+            name: productData.name || '',
+            category: productData.category?.name || 'Uncategorized',
+            categoryId: productData.categoryId || undefined,
+            image: productData.image || '',
+            variants: `${productData.varieties?.length || 0} variant${(productData.varieties?.length || 0) !== 1 ? 's' : ''}`,
+            price: 'TK0',
+            discount: '0%',
+            offer: productData.isOffer || false,
+            status: productData.status || 'active',
+            shortDesc: productData.shortDesc || '',
+            longDesc: productData.longDesc || '',
+            offerSwitch: productData.isOffer || false
+          })
+          
+          // Load varieties from database
+          if (productData.varieties && productData.varieties.length > 0) {
+            setProdVarieties(productData.varieties.map((v: { id: string; name: string; price: number; stock: number; discount: string | null }) => ({
+              id: parseInt(v.id.slice(-6), 16) || Date.now() + Math.random(),
+              name: v.name || '',
+              price: (v.price || 0).toString(),
+              stock: (v.stock || 0).toString(),
+              discount: v.discount || ''
+            })))
+          } else {
+            setProdVarieties([])
+          }
+          
+          // Load images from database
+          if (productData.images && productData.images.length > 0) {
+            setProdImages(productData.images.map((img: { url: string }) => img.url))
+          } else if (productData.image) {
+            setProdImages([productData.image])
+          } else {
+            setProdImages([])
+          }
+          
+          // Load FAQs from database
+          if (productData.faqs && productData.faqs.length > 0) {
+            setProdFaqs(productData.faqs.map((f: { id: string; question: string; answer: string }) => ({
+              id: parseInt(f.id.slice(-6), 16) || Date.now() + Math.random(),
+              question: f.question || '',
+              answer: f.answer || ''
+            })))
+          } else {
+            setProdFaqs([])
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching product details:', error)
+        setProdVarieties([])
+        setProdFaqs([])
+        setProdImages([])
+      }
     } else {
       setEditingProduct({
-        id: Date.now(), name: '', category: '', image: 'https://via.placeholder.com/80', variants: '0 variants', price: '$0.00', discount: '0%', offer: false, status: 'active', shortDesc: '', longDesc: '', offerSwitch: false
+        id: '', name: '', category: '', categoryId: '', image: '', variants: '0 variants', price: 'TK0', discount: '0%', offer: false, status: 'active', shortDesc: '', longDesc: '', offerSwitch: false
       })
+      setProdVarieties([])
+      setProdFaqs([])
+      setProdImages([])
+      setProdRelated([])
     }
-    setProdVarieties([])
-    setProdFaqs([])
-    setProdImages([])
-    setProdRelated([])
   }
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!editingProduct?.name) { showToastMsg('Please enter product name'); return }
-    const exists = products.find(p => p.id === editingProduct.id)
-    let updatedProducts
-    const finalProd = { ...editingProduct, offer: editingProduct.offerSwitch }
     
-    if (exists) {
-      updatedProducts = products.map(p => p.id === editingProduct.id ? finalProd : p)
-    } else {
-      updatedProducts = [...products, finalProd]
+    const isNewProduct = !editingProduct.id || editingProduct.id === ''
+    
+    // Prepare varieties data
+    const varietiesData = prodVarieties.map(v => ({
+      name: v.name,
+      price: parseFloat(v.price) || 0,
+      stock: parseInt(v.stock) || 0,
+      discount: v.discount || null
+    }))
+
+    // Prepare FAQs data
+    const faqsData = prodFaqs.map(f => ({
+      question: f.question,
+      answer: f.answer
+    }))
+
+    // Get category ID from categories list
+    const selectedCategory = categories.find(c => c.name === editingProduct.category)
+    const categoryId = selectedCategory?.id || null
+
+    try {
+      if (isNewProduct) {
+        // Create new product
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: editingProduct.name,
+            categoryId: categoryId,
+            shortDesc: editingProduct.shortDesc,
+            longDesc: editingProduct.longDesc,
+            isOffer: editingProduct.offerSwitch,
+            status: editingProduct.status || 'active',
+            image: prodImages[0] || editingProduct.image || null,
+            varieties: varietiesData,
+            faqs: faqsData
+          })
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Product Created Successfully!')
+          fetchProducts()
+          setEditingProduct(null)
+        } else {
+          showToastMsg(data.error || 'Failed to create product')
+        }
+      } else {
+        // Update existing product
+        const res = await fetch(`/api/products/${editingProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: editingProduct.name,
+            categoryId: categoryId,
+            shortDesc: editingProduct.shortDesc,
+            longDesc: editingProduct.longDesc,
+            isOffer: editingProduct.offerSwitch,
+            status: editingProduct.status,
+            image: prodImages[0] || editingProduct.image || null,
+            varieties: varietiesData,
+            faqs: faqsData
+          })
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Product Updated Successfully!')
+          fetchProducts()
+          setEditingProduct(null)
+        } else {
+          showToastMsg(data.error || 'Failed to update product')
+        }
+      }
+    } catch (error) {
+      console.error('Error saving product:', error)
+      showToastMsg('Failed to save product')
     }
-    setProducts(updatedProducts)
-    setEditingProduct(null)
-    showToastMsg('Product Updated Successfully!')
   }
 
-  const toggleProdStatus = (id: number) => {
-    setProducts(products.map(p => p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p))
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Delete this product?")) return
+    
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Product Deleted Successfully!')
+        fetchProducts()
+      } else {
+        showToastMsg(data.error || 'Failed to delete product')
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      showToastMsg('Failed to delete product')
+    }
+  }
+
+  const toggleProdStatus = async (id: string) => {
+    const product = products.find(p => p.id === id)
+    if (!product) return
+    
+    const newStatus = product.status === 'active' ? 'inactive' : 'active'
+    
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setProducts(products.map(p => p.id === id ? { ...p, status: newStatus } : p))
+      } else {
+        showToastMsg(data.error || 'Failed to update status')
+      }
+    } catch (error) {
+      console.error('Error updating product status:', error)
+      showToastMsg('Failed to update status')
+    }
+  }
+
+  // Handle product image upload
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    // Check if adding these files would exceed 5 images limit
+    const currentCount = prodImages.length
+    const newFiles = Array.from(files).slice(0, 5 - currentCount)
+    
+    if (currentCount >= 5) {
+      showToastMsg('Maximum 5 images allowed')
+      return
+    }
+
+    if (files.length > newFiles.length) {
+      showToastMsg(`Only ${5 - currentCount} more image(s) can be added (max 5 total)`)
+    }
+
+    newFiles.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        showToastMsg('Please select image files only')
+        return
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToastMsg('Image size should be less than 5MB')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string
+        setProdImages(prev => {
+          if (prev.length >= 5) return prev // Double check limit
+          return [...prev, base64]
+        })
+        // Set first image as main product image
+        if (prodImages.length === 0) {
+          setEditingProduct(prev => prev ? { ...prev, image: base64 } : null)
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeProductImage = (index: number) => {
+    setProdImages(prev => prev.filter((_, i) => i !== index))
+    // Update main image if first image is removed
+    if (index === 0 && prodImages.length > 1) {
+      setEditingProduct(prev => prev ? { ...prev, image: prodImages[1] } : null)
+    } else if (prodImages.length === 1) {
+      setEditingProduct(prev => prev ? { ...prev, image: '' } : null)
+    }
   }
 
   const addVariety = () => setProdVarieties(prev => [...prev, { id: Date.now(), name: '', price: '', stock: '', discount: '' }])
@@ -318,93 +679,136 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   }
 
   // Order Management State
-  const [orders, setOrders] = useState<Order[]>([
-    { 
-      id: 'ORD-POTATO', 
-      customer: 'Raihan', 
-      phone: '+8801866228213', 
-      address: 'Gulshan 2, Road 45, House 12, Dhaka',
-      date: 'Feb 24, 2026',
-      time: '10 min ago',
-      paymentMethod: 'Cash on Delivery',
-      status: 'pending',
-      courierStatus: 'Processing',
-      subtotal: 5850,
-      delivery: 150,
-      discount: 100,        
-      couponCodes: ['FIRST10'], 
-      couponAmount: 50,     
-      total: 5850 + 150 - 100 - 50,
-      canceledBy: null,
-      items: [
-        { name: 'Organic Milk', variant: '1L', qty: 2, basePrice: 150, offerText: '5% off', offerDiscount: 7.5, couponCode: null, couponDiscount: 0 }, 
-        { name: 'Samsung Galaxy S24', variant: '256GB', qty: 1, basePrice: 4180, offerText: null, offerDiscount: 0, couponCode: 'NEWPHONE', couponDiscount: 100 }, 
-        { name: 'Premium Coffee', variant: null, qty: 1, basePrice: 1370, offerText: '10% off', offerDiscount: 137, couponCode: 'COFFEE20', couponDiscount: 50 }, 
-      ]
-    },
-    { 
-      id: 'ORD-002', 
-      customer: 'Sarah Johnson', 
-      phone: '+8801987654321', 
-      address: 'Dhanmondi, Road 8A, Dhaka',
-      date: 'Feb 25, 2026',
-      time: '25 min ago',
-      paymentMethod: 'Pre-payment',
-      status: 'approved',
-      courierStatus: 'Shipping', 
-      subtotal: 1650,
-      delivery: 0,
-      discount: 0,          
-      couponCodes: [],        
-      couponAmount: 0,
-      total: 1650,
-      canceledBy: null,
-      items: [
-        { name: 'Orange Juice', variant: '1L', qty: 2, basePrice: 600, offerText: null, offerDiscount: 0, couponCode: null, couponDiscount: 0 }, 
-        { name: 'Apples', variant: '1kg', qty: 1, basePrice: 450, offerText: null, offerDiscount: 0, couponCode: null, couponDiscount: 0 }, 
-      ]
-    },
-    { 
-      id: 'ORD-003', 
-      customer: 'Mike Wilson', 
-      phone: '+8801555123456', 
-      address: 'Banani, Block C, Dhaka',
-      date: 'Feb 24, 2026',
-      time: '1 hour ago',
-      paymentMethod: 'Cash on Delivery',
-      status: 'canceled',
-      courierStatus: 'Canceled', 
-      subtotal: 4200,
-      delivery: 100,
-      discount: 500,        
-      couponCodes: [],        
-      couponAmount: 0,
-      total: 4200 - 500 + 100,
-      canceledBy: 'Customer',
-      items: [
-        { name: 'Basmati Rice', variant: '5kg', qty: 1, basePrice: 1800, offerText: null, offerDiscount: 0, couponCode: null, couponDiscount: 0 }, 
-        { name: 'Olive Oil', variant: '2L', qty: 2, basePrice: 1200, offerText: null, offerDiscount: 0, couponCode: null, couponDiscount: 0 }, 
-      ]
-    },
-  ])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
   const [currentOrderFilter, setCurrentOrderFilter] = useState<'all' | 'pending' | 'approved' | 'canceled'>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+
+  // Fetch orders from database
+  const fetchOrders = async () => {
+    setOrdersLoading(true)
+    try {
+      const res = await fetch('/api/orders')
+      const data = await res.json()
+      if (data.success && data.orders) {
+        const formattedOrders: Order[] = data.orders.map((order: {
+          id: string
+          orderNumber: string
+          customerName: string
+          customerPhone: string
+          customerAddress: string
+          paymentMethod: string
+          status: string
+          courierStatus: string | null
+          canceledBy: string | null
+          subtotal: number
+          deliveryCharge: number
+          discount: number
+          couponDiscount: number
+          total: number
+          notes: string | null
+          createdAt: string
+          items: { productName: string; varietyName: string | null; quantity: number; basePrice: number; offerDiscount: number; couponDiscount: number; totalPrice: number }[]
+          couponCodes: { code: string; discount: number }[]
+          consignmentId?: string | null
+          trackingCode?: string | null
+        }) => {
+          const date = new Date(order.createdAt)
+          return {
+            id: order.orderNumber,
+            databaseId: order.id,
+            customer: order.customerName,
+            phone: order.customerPhone,
+            address: order.customerAddress,
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: getTimeAgo(order.createdAt),
+            paymentMethod: order.paymentMethod,
+            status: order.status as 'pending' | 'approved' | 'canceled' | 'delivered',
+            courierStatus: order.courierStatus || 'Processing',
+            subtotal: order.subtotal,
+            delivery: order.deliveryCharge,
+            discount: order.discount,
+            couponCodes: order.couponCodes?.map((c: { code: string }) => c.code) || [],
+            couponAmount: order.couponDiscount || 0,
+            total: order.total,
+            canceledBy: order.canceledBy,
+            consignmentId: order.consignmentId,
+            trackingCode: order.trackingCode,
+            items: order.items?.map((item: { productName: string; varietyName: string | null; quantity: number; basePrice: number; offerDiscount: number; couponDiscount: number; totalPrice: number }) => ({
+              name: item.productName,
+              variant: item.varietyName,
+              qty: item.quantity,
+              basePrice: item.basePrice,
+              offerText: item.offerDiscount > 0 ? `${item.offerDiscount} off` : null,
+              offerDiscount: item.offerDiscount,
+              couponCode: null,
+              couponDiscount: item.couponDiscount
+            })) || []
+          }
+        })
+        setOrders(formattedOrders)
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      showToastMsg('Failed to load orders')
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+  // Helper function to get time ago
+  const getTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays === 1) return 'Yesterday'
+    return `${diffDays} days ago`
+  }
+
+  // Fetch orders on component mount and when dashView changes to orders
+  useEffect(() => {
+    if (dashView === 'orders') {
+      fetchOrders()
+    }
+  }, [dashView])
 
   const filteredOrders = currentOrderFilter === 'all' 
     ? orders 
     : orders.filter(order => order.status === currentOrderFilter)
 
-  const updateOrderStatus = (id: string, status: 'approved' | 'canceled') => {
-    setOrders(orders.map(order => {
-      if (order.id === id) {
-        return { 
-          ...order, 
-          status, 
-          canceledBy: status === 'canceled' ? 'Admin' : null 
-        }
+  const updateOrderStatus = async (id: string, status: 'approved' | 'canceled') => {
+    const order = orders.find(o => o.id === id)
+    if (!order) return
+
+    try {
+      const res = await fetch(`/api/orders/${order.databaseId || id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status,
+          canceledBy: status === 'canceled' ? 'Admin' : null
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        showToastMsg(data.message || `Order ${status} successfully!`)
+        fetchOrders() // Refresh orders list
+      } else {
+        showToastMsg(data.error || 'Failed to update order')
       }
-      return order
-    }))
+    } catch (error) {
+      console.error('Error updating order:', error)
+      showToastMsg('Failed to update order')
+    }
   }
 
   const copyToClipboard = (text: string) => {
@@ -412,33 +816,20 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     showToastMsg('Number Copied!')
   }
 
-  // Coupon Management State
-  const couponProducts: CouponProduct[] = [
-    { id:1, name:'Fresh Carrots', price:'TK80', img:'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png' },
-    { id:2, name:'Premium Potatoes', price:'TK45', img:'https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png' },
-    { id:3, name:'Fresh Tomatoes', price:'TK60', img:'https://i.postimg.cc/mr7CkxtQ/1000020584-removebg-preview.png' },
-    { id:4, name:'Red Apples', price:'TK90', img:'https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png' },
-    { id:5, name:'Fresh Bananas', price:'TK50', img:'https://i.postimg.cc/bw71qYYK/IMG-20260228-163147.png' },
-    { id:6, name:'Sweet Oranges', price:'TK80', img:'https://i.postimg.cc/mr7Ckxtx/IMG-20260228-163156.png' },
-    { id:7, name:'Grapes Green', price:'TK120', img:'https://i.postimg.cc/htkVK4PD/IMG-20260228-163208.png' },
-    { id:8, name:'Mango Fresh', price:'TK150', img:'https://i.postimg.cc/Z5G6JYKm/IMG-20260228-163217.png' },
-  ]
-  const couponCategories: CouponCategory[] = [
-    { name:'Fruits & Vegetables', color:'#16a34a' },
-    { name:'Dairy & Eggs',        color:'#2563eb' },
-    { name:'Bakery',              color:'#d97706' },
-    { name:'Meat & Seafood',      color:'#dc2626' },
-    { name:'Beverages',           color:'#7c3aed' },
-    { name:'Snacks',              color:'#0891b2' },
-    { name:'Frozen Foods',        color:'#0284c7' },
-  ]
+  // Coupon Management State - derive products and categories from database
+  const couponProducts: CouponProduct[] = products.map(p => ({
+    id: p.id?.toString() || '',
+    name: p.name || '',
+    price: p.price || 'TK0',
+    img: p.image || ''
+  }))
+  const couponCategories: CouponCategory[] = categories.map(c => ({
+    name: c.name,
+    color: '#16a34a'
+  }))
   
-  const [coupons, setCoupons] = useState<Coupon[]>([
-    { id: '1', code: 'SUMMER20', type: 'pct', value: 20, scope: 'all', expiry: '2025-08-31' },
-    { id: '2', code: 'FLAT15', type: 'fixed', value: 15, scope: 'products', expiry: '2025-07-15', selectedProducts: [1, 3] },
-    { id: '3', code: 'BAKERY10', type: 'pct', value: 10, scope: 'categories', expiry: '', selectedCategories: ['Bakery'] },
-    { id: '4', code: 'WELCOME50', type: 'fixed', value: 50, scope: 'all', expiry: '' },
-  ])
+  const [coupons, setCoupons] = useState<Coupon[]>([])
+  const [couponsLoading, setCouponsLoading] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null)
   const [couponForm, setCouponForm] = useState({
     code: '',
@@ -447,8 +838,37 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     expiry: '',
     scope: 'all' as 'all' | 'products' | 'categories',
   })
-  const [pickedProducts, setPickedProducts] = useState<number[]>([])
+  const [pickedProducts, setPickedProducts] = useState<string[]>([])
   const [pickedCategories, setPickedCategories] = useState<string[]>([])
+
+  // Fetch coupons from database
+  const fetchCoupons = async () => {
+    setCouponsLoading(true)
+    try {
+      const res = await fetch('/api/coupons')
+      const data = await res.json()
+      if (data.success && data.coupons) {
+        setCoupons(data.coupons)
+      }
+    } catch (error) {
+      console.error('Error fetching coupons:', error)
+      showToastMsg('Failed to load coupons')
+    } finally {
+      setCouponsLoading(false)
+    }
+  }
+
+  // Fetch coupons on component mount
+  useEffect(() => {
+    fetchCoupons()
+  }, [])
+
+  // Fetch coupons when dashView changes to coupons
+  useEffect(() => {
+    if (dashView === 'coupons') {
+      fetchCoupons()
+    }
+  }, [dashView])
 
   const openCouponEdit = (coupon: Coupon | null = null) => {
     if (coupon && coupon.id) {
@@ -456,10 +876,10 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
         code: coupon.code,
         type: coupon.type,
         value: coupon.value.toString(),
-        expiry: coupon.expiry,
+        expiry: coupon.expiry || '',
         scope: coupon.scope,
       })
-      setPickedProducts(coupon.selectedProducts || [])
+      setPickedProducts((coupon.selectedProducts || []).map(id => id.toString()))
       setPickedCategories(coupon.selectedCategories || [])
       setEditingCoupon(coupon)
     } else {
@@ -470,41 +890,86 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     }
   }
 
-  const handleSaveCoupon = () => {
+  const handleSaveCoupon = async () => {
     if (!couponForm.code.trim()) { showToastMsg('Please enter a coupon code.'); return }
     if (!couponForm.value.trim()) { showToastMsg('Please enter a discount value.'); return }
 
-    const newCoupon: Coupon = {
-      id: editingCoupon?.id || Date.now().toString(),
+    const couponData = {
       code: couponForm.code.toUpperCase(),
       type: couponForm.type,
       value: parseFloat(couponForm.value),
       scope: couponForm.scope,
-      expiry: couponForm.expiry,
+      expiry: couponForm.expiry || null,
       selectedProducts: couponForm.scope === 'products' ? pickedProducts : undefined,
       selectedCategories: couponForm.scope === 'categories' ? pickedCategories : undefined,
     }
 
-    if (editingCoupon?.id) {
-      setCoupons(coupons.map(c => c.id === editingCoupon.id ? newCoupon : c))
-      showToastMsg('Coupon updated!')
-    } else {
-      setCoupons([...coupons, newCoupon])
-      showToastMsg('Coupon added!')
+    try {
+      const isNewCoupon = !editingCoupon?.id || editingCoupon.id === ''
+      
+      if (isNewCoupon) {
+        // Create new coupon
+        const res = await fetch('/api/coupons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(couponData)
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Coupon created successfully!')
+          fetchCoupons()
+          setEditingCoupon(null)
+        } else {
+          showToastMsg(data.error || 'Failed to create coupon')
+        }
+      } else {
+        // Update existing coupon
+        const res = await fetch(`/api/coupons/${editingCoupon.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(couponData)
+        })
+        const data = await res.json()
+        if (data.success) {
+          showToastMsg('Coupon updated successfully!')
+          fetchCoupons()
+          setEditingCoupon(null)
+        } else {
+          showToastMsg(data.error || 'Failed to update coupon')
+        }
+      }
+    } catch (error) {
+      console.error('Error saving coupon:', error)
+      showToastMsg('Failed to save coupon')
     }
-    setEditingCoupon(null)
   }
 
-  const deleteCoupon = (id: string) => {
-    setCoupons(coupons.filter(c => c.id !== id))
-    showToastMsg('Coupon deleted!')
+  const deleteCoupon = async (id: string) => {
+    if (!confirm('Delete this coupon?')) return
+    
+    try {
+      const res = await fetch(`/api/coupons/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Coupon deleted successfully!')
+        fetchCoupons()
+      } else {
+        showToastMsg(data.error || 'Failed to delete coupon')
+      }
+    } catch (error) {
+      console.error('Error deleting coupon:', error)
+      showToastMsg('Failed to delete coupon')
+    }
   }
 
-  const toggleProductPick = (id: number) => {
-    if (pickedProducts.includes(id)) {
-      setPickedProducts(pickedProducts.filter(p => p !== id))
+  const toggleProductPick = (id: number | string) => {
+    const idStr = id.toString()
+    if (pickedProducts.includes(idStr)) {
+      setPickedProducts(pickedProducts.filter(p => p !== idStr))
     } else {
-      setPickedProducts([...pickedProducts, id])
+      setPickedProducts([...pickedProducts, idStr])
     }
   }
 
@@ -517,106 +982,104 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   }
 
   const formatExpiry = (expiry: string) => {
-    if (!expiry) return '[Not Applied]'
+    if (!expiry) return '[No Expiry]'
     const d = new Date(expiry + 'T00:00:00')
     return `[${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}]`
   }
 
   // Abandoned Checkouts State
-  const [abandonedCheckouts] = useState<AbandonedCheckout[]>([
-    {
-      id: 1, name: 'Rafi Hossain', phone: '+1 987 654 321',
-      address: '555 Park Ave, Dhaka',
-      visitTime: '15 min ago', visitDate: 'Feb 24, 2026 · 3:42 PM',
-      totalVisits: 3, completedOrders: 1,
-      history: [
-        {
-          date: 'Feb 24, 2026', time: '3:42 PM', timeAgo: '15 min ago', status: 'abandoned',
-          products: [
-            { name: 'Organic Milk', variants: [{ label: '500ml', qty: 2 }] },
-            { name: 'Whole Wheat Bread', variants: [{ label: null, qty: 2 }] },
-            { name: 'Farm Eggs', variants: [{ label: '12 pcs', qty: 1 }] },
-            { name: 'Cheddar Cheese', variants: [{ label: '200g', qty: 1 }] },
-          ],
-          total: 45.92
-        },
-        {
-          date: 'Feb 20, 2026', time: '5:10 PM', timeAgo: '4 days ago', status: 'abandoned',
-          products: [{ name: 'Butter', variants: [{ label: '200g', qty: 1 }] }],
-          total: 12.50
-        },
-        {
-          date: 'Feb 18, 2026', time: '7:05 PM', timeAgo: '6 days ago', status: 'completed',
-          products: [
-            { name: 'Basmati Rice', variants: [{ label: '2kg', qty: 1 }] },
-            { name: 'Soybean Oil', variants: [{ label: '1L', qty: 1 }] },
-          ],
-          total: 35.97
-        },
-      ]
-    },
-    {
-      id: 2, name: 'Tariq Mahmud', phone: '+1 765 432 109',
-      address: '888 River St, Chittagong',
-      visitTime: '2 hours ago', visitDate: 'Feb 24, 2026 · 1:55 PM',
-      totalVisits: 5, completedOrders: 2,
-      history: [
-        {
-          date: 'Feb 24, 2026', time: '1:55 PM', timeAgo: '2 hours ago', status: 'abandoned',
-          products: [
-            { name: 'Basmati Rice', variants: [{ label: '1kg', qty: 3 }] },
-            { name: 'Cooking Oil', variants: [{ label: '500ml', qty: 4 }] },
-            { name: 'Lentils', variants: [{ label: 'Red', qty: 2 }] },
-            { name: 'Spices', variants: [{ label: 'Mix', qty: 1 }] },
-          ],
-          total: 284.61
-        },
-        {
-          date: 'Feb 22, 2026', time: '9:00 AM', timeAgo: '2 days ago', status: 'completed',
-          products: [{ name: 'Salt', variants: [{ label: '1kg', qty: 2 }] }],
-          total: 10.00
-        },
-        {
-          date: 'Feb 15, 2026', time: '6:30 PM', timeAgo: '9 days ago', status: 'completed',
-          products: [{ name: 'Sugar', variants: [{ label: '1kg', qty: 2 }] }],
-          total: 22.15
-        },
-        {
-          date: 'Feb 10, 2026', time: '12:00 PM', timeAgo: '2 weeks ago', status: 'abandoned',
-          products: [{ name: 'Tea Leaves', variants: [{ label: '400g', qty: 1 }] }],
-          total: 8.50
-        },
-        {
-          date: 'Feb 05, 2026', time: '4:20 PM', timeAgo: '3 weeks ago', status: 'abandoned',
-          products: [{ name: 'Biscuits', variants: [{ label: 'Pack', qty: 5 }] }],
-          total: 15.20
-        },
-      ]
-    },
-    {
-      id: 3, name: 'Sumaiya Akter', phone: '+1 654 321 098',
-      address: '12 Green Rd, Sylhet',
-      visitTime: '4 hours ago', visitDate: 'Feb 24, 2026 · 11:40 AM',
-      totalVisits: 2, completedOrders: 1,
-      history: [
-        {
-          date: 'Feb 24, 2026', time: '11:40 AM', timeAgo: '4 hours ago', status: 'abandoned',
-          products: [
-            { name: 'Yogurt', variants: [{ label: '150g', qty: 2 }] },
-            { name: 'Milk', variants: [{ label: '1L', qty: 1 }] },
-            { name: 'Honey', variants: [{ label: '250g', qty: 1 }] },
-          ],
-          total: 27.41
-        },
-        {
-          date: 'Feb 20, 2026', time: '10:00 AM', timeAgo: '4 days ago', status: 'completed',
-          products: [{ name: 'Apples', variants: [{ label: '1kg', qty: 1 }] }],
-          total: 15.00
-        }
-      ]
+  const [abandonedCheckouts, setAbandonedCheckouts] = useState<AbandonedCheckout[]>([])
+  const [abandonedLoading, setAbandonedLoading] = useState(false)
+
+  // Fetch abandoned checkouts from API
+  const fetchAbandonedCheckouts = async () => {
+    setAbandonedLoading(true)
+    try {
+      const res = await fetch('/api/abandoned')
+      const data = await res.json()
+      if (data.success && data.abandonedCheckouts) {
+        const formatted: AbandonedCheckout[] = data.abandonedCheckouts.map((item: {
+          id: string
+          customerName: string
+          customerPhone: string
+          customerAddress: string | null
+          visitTime: string
+          totalVisits: number
+          history: Array<{
+            id: string
+            visitDate: string
+            status: string
+            total: number
+            products: Array<{
+              productName: string
+              varietyLabel: string | null
+              quantity: number
+            }>
+          }>
+        }) => {
+          const visitDate = new Date(item.visitTime)
+          const completedOrders = item.history.filter((h: { status: string }) => h.status === 'completed').length
+          
+          return {
+            id: item.id,
+            name: item.customerName,
+            phone: item.customerPhone,
+            address: item.customerAddress || '',
+            visitTime: getTimeAgo(item.visitTime),
+            visitDate: `${visitDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · ${visitDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+            totalVisits: item.totalVisits,
+            completedOrders,
+            history: item.history.map((h: {
+              visitDate: string
+              status: string
+              total: number
+              products: Array<{ productName: string; varietyLabel: string | null; quantity: number }>
+            }) => {
+              const hDate = new Date(h.visitDate)
+              // Group products by name and combine variants
+              const productMap = new Map<string, { label: string | null; qty: number }[]>()
+              h.products.forEach((p) => {
+                if (!productMap.has(p.productName)) {
+                  productMap.set(p.productName, [])
+                }
+                productMap.get(p.productName)!.push({
+                  label: p.varietyLabel,
+                  qty: p.quantity
+                })
+              })
+              const products = Array.from(productMap.entries()).map(([name, variants]) => ({
+                name,
+                variants
+              }))
+              
+              return {
+                date: hDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                time: hDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+                timeAgo: getTimeAgo(h.visitDate),
+                status: h.status as 'abandoned' | 'completed',
+                products,
+                total: h.total
+              }
+            })
+          }
+        })
+        setAbandonedCheckouts(formatted)
+      }
+    } catch (error) {
+      console.error('Error fetching abandoned checkouts:', error)
+    } finally {
+      setAbandonedLoading(false)
     }
-  ])
-  const [expandedAbandoned, setExpandedAbandoned] = useState<number | null>(null)
+  }
+
+  // Fetch abandoned checkouts when dashView changes to abandoned
+  useEffect(() => {
+    if (dashView === 'abandoned') {
+      fetchAbandonedCheckouts()
+    }
+  }, [dashView])
+
+  const [expandedAbandoned, setExpandedAbandoned] = useState<string | null>(null)
 
   const getInitials = (name: string) => name.split(' ').map(w => w[0]).join('').toUpperCase()
 
@@ -626,7 +1089,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     return entries
   }
 
-  const toggleAbandonedExpand = (id: number) => {
+  const toggleAbandonedExpand = (id: string) => {
     setExpandedAbandoned(expandedAbandoned === id ? null : id)
   }
 
@@ -1469,10 +1932,9 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                       <label style={{display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px'}}>Category</label>
                       <select className="form-input" value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}>
                         <option value="">Select Category</option>
-                        <option value="Fruits & Vegetables">Fruits & Vegetables</option>
-                        <option value="Dairy & Eggs">Dairy & Eggs</option>
-                        <option value="Meat & Seafood">Meat & Seafood</option>
-                        <option value="Bakery">Bakery</option>
+                        {categories.filter(c => c.status === 'Active').map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div style={{background: '#f9fafb', borderRadius: '8px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -1495,12 +1957,23 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
 
                   <div className="ep-card">
                     <h2 style={{fontSize: '16px', fontWeight: 600, marginBottom: '20px'}}>Product Images</h2>
-                    <div className="upload-zone-prod" onClick={() => document.getElementById('prodImgUp')?.click()}>
-                      <p style={{color: '#64748b'}}>Click to upload images</p>
+                    <input type="file" id="prodImgUp" style={{display: 'none'}} accept="image/*" multiple onChange={handleProductImageUpload} />
+                    <div className="upload-zone-prod" onClick={() => prodImages.length < 5 && document.getElementById('prodImgUp')?.click()} style={{cursor: prodImages.length >= 5 ? 'not-allowed' : 'pointer', opacity: prodImages.length >= 5 ? 0.6 : 1}}>
+                      <i className="ri-upload-cloud-2-line" style={{fontSize: '2rem', color: '#94a3b8', marginBottom: '0.5rem', display: 'block'}}></i>
+                      <p style={{color: '#64748b'}}>{prodImages.length >= 5 ? 'Maximum 5 images reached' : `Click to upload images (${prodImages.length}/5)`}</p>
                     </div>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '12px'}}>
-                      {prodImages.map((img, i) => <img key={i} src={img} style={{width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px'}} alt={`Product image ${i+1}`} />)}
-                    </div>
+                    {prodImages.length > 0 && (
+                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '12px'}}>
+                        {prodImages.map((img, i) => (
+                          <div key={i} style={{position: 'relative'}}>
+                            <img src={img} style={{width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px'}} alt={`Product image ${i+1}`} />
+                            <button type="button" onClick={() => removeProductImage(i)} style={{position: 'absolute', top: '4px', right: '4px', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                              <i className="ri-close-line" style={{fontSize: '12px'}}></i>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="ep-card">
@@ -1584,25 +2057,43 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                   <div>Product Details</div><div>Variants</div><div>Price Range</div><div>Discount</div><div>Offer</div><div>Status</div><div style={{textAlign: 'right'}}>Action</div>
                 </div>
               </div>
-              {products.map((prod) => (
-                <div key={prod.id} className="prod-order-card product-row">
-                  <div className="prod-grid-row">
-                    <div className="product-cell">
-                      <img src={prod.image} alt={prod.name} />
-                      <div className="product-info"><span className="product-name">{prod.name}</span><span className="product-cat">{prod.category}</span></div>
-                    </div>
-                    <div>{prod.variants}</div>
-                    <div>{prod.price}</div>
-                    <div className="bracket-text text-red">[{prod.discount}]</div>
-                    <div className={`bracket-text ${prod.offer ? 'text-blue' : 'text-muted-val'}`}>[{prod.offer ? 'Yes' : 'No'}]</div>
-                    <div><div className={`switch-sm ${prod.status === 'active' ? 'active' : ''}`} onClick={() => toggleProdStatus(prod.id)}></div></div>
-                    <div className="prod-manage-col">
-                      <i className="ri-pencil-line" onClick={() => openProductEdit(prod)}></i>
-                      <i className="ri-delete-bin-line" onClick={() => setProducts(products.filter(p => p.id !== prod.id))}></i>
+              {productsLoading ? (
+                <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                  <i className="ri-loader-4-line" style={{fontSize: '24px', animation: 'spin 1s linear infinite'}}></i>
+                  <p style={{marginTop: '8px'}}>Loading products...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                  <i className="ri-store-2-line" style={{fontSize: '32px'}}></i>
+                  <p style={{marginTop: '8px'}}>No products found. Click "Add Product" to create one.</p>
+                </div>
+              ) : (
+                products.map((prod) => (
+                  <div key={prod.id} className="prod-order-card product-row">
+                    <div className="prod-grid-row">
+                      <div className="product-cell">
+                        {prod.image ? (
+                          <img src={prod.image} alt={prod.name} />
+                        ) : (
+                          <div style={{width: '40px', height: '40px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <i className="ri-image-line" style={{color: '#94a3b8', fontSize: '18px'}}></i>
+                          </div>
+                        )}
+                        <div className="product-info"><span className="product-name">{prod.name}</span><span className="product-cat">{prod.category}</span></div>
+                      </div>
+                      <div>{prod.variants}</div>
+                      <div>{prod.price}</div>
+                      <div className="bracket-text text-red">[{prod.discount}]</div>
+                      <div className={`bracket-text ${prod.offer ? 'text-blue' : 'text-muted-val'}`}>[{prod.offer ? 'Yes' : 'No'}]</div>
+                      <div><div className={`switch-sm ${prod.status === 'active' ? 'active' : ''}`} onClick={() => toggleProdStatus(prod.id as string)}></div></div>
+                      <div className="prod-manage-col">
+                        <i className="ri-pencil-line" onClick={() => openProductEdit(prod)}></i>
+                        <i className="ri-delete-bin-line" onClick={() => handleDeleteProduct(prod.id as string)}></i>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
@@ -1861,8 +2352,8 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                       {selectedOrder.couponCodes && selectedOrder.couponCodes.length > 0 && (
                         <>
                           <div className="flex items-center gap-1 text-[#18a87a]">
-                            <span className="font-medium">Coupon :</span>
-                            <span className="font-bold">TK {selectedOrder.couponAmount}</span>
+                            <span className="font-medium">Coupon ({selectedOrder.couponCodes.join(', ')}):</span>
+                            <span className="font-bold">-TK {selectedOrder.couponAmount}</span>
                           </div>
                           <div className="w-[1px] h-3 bg-[#e4e7ee]"></div>
                         </>
@@ -1935,15 +2426,15 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-[#64748b] mb-1.5">
-                        {couponForm.type === 'pct' ? 'Discount Percentage' : 'Discount Amount'}
+                        {couponForm.type === 'pct' ? 'Discount Percentage' : 'Discount Amount (TK)'}
                       </label>
                       <div className="relative">
                         <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold text-sm ${couponForm.type === 'pct' ? 'text-[#d97706]' : 'text-[#2563eb]'}`}>
-                          {couponForm.type === 'pct' ? '%' : '$'}
+                          {couponForm.type === 'pct' ? '%' : 'TK'}
                         </span>
                         <input type="number" 
-                          className="w-full px-3.5 py-2.5 pl-7 bg-white border border-[#e2e8e0] rounded-lg text-sm outline-none focus:border-[#16a34a] transition-colors"
-                          placeholder={couponForm.type === 'pct' ? '20' : '15'}
+                          className="w-full px-3.5 py-2.5 pl-10 bg-white border border-[#e2e8e0] rounded-lg text-sm outline-none focus:border-[#16a34a] transition-colors"
+                          placeholder={couponForm.type === 'pct' ? '20' : '100'}
                           value={couponForm.value}
                           onChange={(e) => setCouponForm({...couponForm, value: e.target.value})}
                           min="1" />
@@ -1986,20 +2477,22 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                     <div className="pt-4 border-t border-[#f1f5f9]">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] mb-3">Select Products</div>
                       <div className="grid grid-cols-2 gap-2">
-                        {couponProducts.map(p => (
+                        {couponProducts.map(p => {
+                          const isSelected = pickedProducts.includes(p.id.toString())
+                          return (
                           <div key={p.id} 
-                            className={`flex items-center gap-2.5 p-2.5 border-[1.5px] rounded-lg cursor-pointer transition-all ${pickedProducts.includes(p.id) ? 'border-[#16a34a] bg-[#f0fdf4]' : 'border-[#e2e8e0] bg-white hover:border-[#94a3b8]'}`}
+                            className={`flex items-center gap-2.5 p-2.5 border-[1.5px] rounded-lg cursor-pointer transition-all ${isSelected ? 'border-[#16a34a] bg-[#f0fdf4]' : 'border-[#e2e8e0] bg-white hover:border-[#94a3b8]'}`}
                             onClick={() => toggleProductPick(p.id)}>
                             <img src={p.img} alt={p.name} className="w-9 h-9 rounded-md object-cover flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-semibold truncate">{p.name}</div>
                               <div className="text-[11px] text-[#16a34a] font-semibold">{p.price}</div>
                             </div>
-                            <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${pickedProducts.includes(p.id) ? 'bg-[#16a34a] border-[#16a34a]' : 'border-[1.5px] border-[#cbd5e1]'}`}>
-                              {pickedProducts.includes(p.id) && <span className="text-white text-[10px]">✓</span>}
+                            <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-[#16a34a] border-[#16a34a]' : 'border-[1.5px] border-[#cbd5e1]'}`}>
+                              {isSelected && <span className="text-white text-[10px]">✓</span>}
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   )}
@@ -2052,20 +2545,37 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                   <div className="px-6 text-[11px] font-bold uppercase tracking-wider text-[#64748b] text-right">Action</div>
                 </div>
 
+                {/* Loading State */}
+                {couponsLoading && (
+                  <div className="py-12 text-center text-[#94a3b8]">
+                    <i className="ri-loader-4-line animate-spin text-2xl mb-2"></i>
+                    <p className="text-sm">Loading coupons...</p>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!couponsLoading && coupons.length === 0 && (
+                  <div className="py-12 text-center text-[#94a3b8]">
+                    <i className="ri-coupon-3-line text-4xl mb-3"></i>
+                    <p className="text-sm font-medium">No coupons yet</p>
+                    <p className="text-xs mt-1">Click "Add Coupon" to create your first coupon</p>
+                  </div>
+                )}
+
                 {/* Data Rows */}
-                {coupons.map((coupon) => (
+                {!couponsLoading && coupons.map((coupon) => (
                   <div key={coupon.id} className="grid grid-cols-6 bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_1px_#f1f5f9] overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.07),0_0_0_1px_#e2e8f0] transition-shadow">
                     <div className="px-6 py-5 border-r border-[#eef2f6] flex items-center">
                       <span className="text-[13px] font-bold tracking-[0.7px] truncate">{coupon.code}</span>
                     </div>
                     <div className="px-6 py-5 border-r border-[#eef2f6] flex items-center">
                       <span className={`text-[13px] font-medium ${coupon.type === 'pct' ? 'text-[#d97706]' : 'text-[#2563eb]'}`}>
-                        [{coupon.type === 'pct' ? '% Percentage' : '$ Fixed'}]
+                        [{coupon.type === 'pct' ? '% Percentage' : 'Fixed Amount'}]
                       </span>
                     </div>
                     <div className="px-6 py-5 border-r border-[#eef2f6] flex items-center">
                       <span className={`text-[13px] font-medium ${coupon.type === 'pct' ? 'text-[#d97706]' : 'text-[#2563eb]'}`}>
-                        [{coupon.type === 'pct' ? `${coupon.value}% Off` : `$${coupon.value} Off`}]
+                        [{coupon.type === 'pct' ? `${coupon.value}% Off` : `TK${coupon.value} Off`}]
                       </span>
                     </div>
                     <div className="px-6 py-5 border-r border-[#eef2f6] flex items-center">
@@ -2636,7 +3146,22 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e4e7ee]">
-                  {adminReviews.map((review) => (
+                  {reviewsLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-[#8a96a8]">
+                        <i className="ri-loader-4-line animate-spin text-xl"></i>
+                        <p className="mt-2 text-sm">Loading reviews...</p>
+                      </td>
+                    </tr>
+                  ) : adminReviews.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-[#8a96a8]">
+                        <i className="ri-chat-delete-line text-3xl"></i>
+                        <p className="mt-2 text-sm">No reviews yet</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    adminReviews.map((review) => (
                     <tr key={review.id} className="hover:bg-[#f5f6f9]/50 transition-colors">
                       <td className="px-4 py-3">
                         <div>
@@ -2667,14 +3192,15 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                       </td>
                       <td className="px-4 py-3">
                         <button 
-                          onClick={() => setAdminReviews(adminReviews.filter(r => r.id !== review.id))}
+                          onClick={() => deleteReview(review.id as string)}
                           className="px-3 py-1.5 text-[11px] font-semibold text-[#ef4444] border border-[#ef4444] rounded-lg hover:bg-[#ef4444]/10 transition-colors"
                         >
                           <i className="ri-delete-bin-line mr-1"></i>Delete
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

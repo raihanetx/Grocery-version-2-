@@ -7,12 +7,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const offerOnly = searchParams.get('offer') === 'true'
     const categoryId = searchParams.get('categoryId')
+    const all = searchParams.get('all') === 'true' // For admin to get all products
 
     const whereClause: {
       isOffer?: boolean
       categoryId?: string
-      status: string
-    } = { status: 'active' }
+      status?: string
+    } = {}
+
+    // Only filter by status if not requesting all products (for admin)
+    if (!all) {
+      whereClause.status = 'active'
+    }
 
     if (offerOnly) {
       whereClause.isOffer = true
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, categoryId, shortDesc, longDesc, isOffer, status, image, varieties } = body
+    const { name, categoryId, shortDesc, longDesc, isOffer, status, image, varieties, faqs } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json(
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create product with varieties
+    // Create product with varieties and FAQs
     const product = await db.product.create({
       data: {
         name: name.trim(),
@@ -69,17 +75,26 @@ export async function POST(request: NextRequest) {
         isOffer: isOffer || false,
         status: status || 'active',
         image: image || null,
-        varieties: varieties ? {
+        varieties: varieties && varieties.length > 0 ? {
           create: varieties.map((v: { name: string; price: number; stock: number; discount: string | null }) => ({
-            name: v.name,
-            price: v.price,
-            stock: v.stock || 0,
+            name: v.name.trim(),
+            price: Number(v.price) || 0,
+            stock: Number(v.stock) || 0,
             discount: v.discount || null
+          }))
+        } : undefined,
+        faqs: faqs && faqs.length > 0 ? {
+          create: faqs.map((f: { question: string; answer: string }, index: number) => ({
+            question: f.question.trim(),
+            answer: f.answer.trim(),
+            order: index
           }))
         } : undefined
       },
       include: {
-        varieties: true
+        varieties: true,
+        faqs: true,
+        category: true
       }
     })
 

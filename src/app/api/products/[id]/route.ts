@@ -51,7 +51,7 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, categoryId, shortDesc, longDesc, isOffer, status, image, varieties } = body
+    const { name, categoryId, shortDesc, longDesc, isOffer, status, image, varieties, faqs } = body
 
     // Check if product exists
     const existingProduct = await db.product.findUnique({
@@ -63,6 +63,47 @@ export async function PUT(
         { success: false, error: 'Product not found' },
         { status: 404 }
       )
+    }
+
+    // If varieties provided, update them first
+    if (varieties !== undefined) {
+      // Delete existing varieties
+      await db.productVariety.deleteMany({
+        where: { productId: id }
+      })
+
+      // Create new varieties if array is not empty
+      if (varieties && varieties.length > 0) {
+        await db.productVariety.createMany({
+          data: varieties.map((v: { name: string; price: number; stock: number; discount: string | null }) => ({
+            productId: id,
+            name: v.name?.trim() || '',
+            price: Number(v.price) || 0,
+            stock: Number(v.stock) || 0,
+            discount: v.discount || null
+          }))
+        })
+      }
+    }
+
+    // If FAQs provided, update them
+    if (faqs !== undefined) {
+      // Delete existing FAQs
+      await db.productFaq.deleteMany({
+        where: { productId: id }
+      })
+
+      // Create new FAQs if array is not empty
+      if (faqs && faqs.length > 0) {
+        await db.productFaq.createMany({
+          data: faqs.map((f: { question: string; answer: string }, index: number) => ({
+            productId: id,
+            question: f.question?.trim() || '',
+            answer: f.answer?.trim() || '',
+            order: index
+          }))
+        })
+      }
     }
 
     // Update product
@@ -78,28 +119,11 @@ export async function PUT(
         ...(image !== undefined && { image }),
       },
       include: {
-        varieties: true
+        varieties: true,
+        faqs: true,
+        category: true
       }
     })
-
-    // If varieties provided, update them
-    if (varieties && Array.isArray(varieties)) {
-      // Delete existing varieties
-      await db.productVariety.deleteMany({
-        where: { productId: id }
-      })
-
-      // Create new varieties
-      await db.productVariety.createMany({
-        data: varieties.map((v: { name: string; price: number; stock: number; discount: string | null }) => ({
-          productId: id,
-          name: v.name,
-          price: v.price,
-          stock: v.stock || 0,
-          discount: v.discount || null
-        }))
-      })
-    }
 
     return NextResponse.json({ success: true, product: updatedProduct })
   } catch (error) {

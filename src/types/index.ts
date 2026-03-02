@@ -6,6 +6,8 @@ export interface CartItem {
   oldPrice: number
   img: string
   weight: string
+  quantity?: number
+  productId?: string
 }
 
 // Review Types
@@ -32,9 +34,10 @@ export interface Category {
 
 // Product Types
 export interface Product {
-  id: number
+  id: string | number
   name: string
   category: string
+  categoryId?: string
   image: string
   variants: string
   price: string
@@ -65,7 +68,7 @@ export interface Alert {
 
 // Admin Review Types
 export interface AdminReview {
-  id: number
+  id: number | string
   product: string
   productCategory: string
   productImg: string
@@ -90,13 +93,14 @@ export interface OrderItem {
 
 export interface Order {
   id: string
+  databaseId?: string
   customer: string
   phone: string
   address: string
   date: string
   time: string
   paymentMethod: string
-  status: 'pending' | 'approved' | 'canceled'
+  status: 'pending' | 'approved' | 'canceled' | 'delivered'
   courierStatus: string
   subtotal: number
   delivery: number
@@ -105,6 +109,8 @@ export interface Order {
   couponAmount: number
   total: number
   canceledBy: string | null
+  consignmentId?: string | null
+  trackingCode?: string | null
   items: OrderItem[]
 }
 
@@ -116,12 +122,13 @@ export interface Coupon {
   value: number
   scope: 'all' | 'products' | 'categories'
   expiry: string
-  selectedProducts?: number[]
+  isActive?: boolean
+  selectedProducts?: string[]
   selectedCategories?: string[]
 }
 
 export interface CouponProduct {
-  id: number
+  id: number | string
   name: string
   price: string
   img: string
@@ -153,7 +160,7 @@ export interface AbandonedHistory {
 }
 
 export interface AbandonedCheckout {
-  id: number
+  id: number | string
   name: string
   phone: string
   address: string

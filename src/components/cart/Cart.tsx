@@ -4,6 +4,21 @@ import React from 'react'
 import { CartItem } from '@/types'
 
 const Cart = ({ setView, cartItems, setCartItems }: { setView: (v: string) => void; cartItems: CartItem[]; setCartItems: (items: CartItem[]) => void }) => {
+  // Update quantity for an item
+  const updateQuantity = (index: number, newQuantity: number) => {
+    if (newQuantity < 1) return
+    const newItems = [...cartItems]
+    newItems[index] = { ...newItems[index], quantity: newQuantity }
+    setCartItems(newItems)
+  }
+
+  // Delete item
+  const deleteItem = (index: number) => {
+    const newItems = [...cartItems]
+    newItems.splice(index, 1)
+    setCartItems(newItems)
+  }
+
   if (cartItems.length === 0) {
     return (
       <main className="flex flex-col items-center justify-center h-[calc(100vh-120px)] px-6 space-y-20 bg-white font-inter">
@@ -19,9 +34,10 @@ const Cart = ({ setView, cartItems, setCartItems }: { setView: (v: string) => vo
     )
   }
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price, 0)
-  const tax = subtotal * 0.05
-  const total = subtotal + tax + 50 
+  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * (item.quantity || 1)), 0)
+  const totalItems = cartItems.reduce((acc, item) => acc + (item.quantity || 1), 0)
+  const deliveryCharge = subtotal >= 1000 ? 0 : 60
+  const total = subtotal + deliveryCharge
 
   return (
     <div className="cart-wrapper-container">
@@ -33,26 +49,37 @@ const Cart = ({ setView, cartItems, setCartItems }: { setView: (v: string) => vo
               <div className="c12-info">
                 <div className="c12-name-row"><span className="c12-name">{item.name}</span> <span className="c12-weight">({item.weight})</span></div>
                 <div className="c12-action-row">
-                  <div className="c12-price">TK {item.price}</div>
+                  <div className="c12-price">TK {item.price * (item.quantity || 1)}</div>
                   <div className="c12-qty-group">
-                    <button className="c12-qbtn"><i className="ph ph-minus"></i></button>
-                    <span className="c12-qval">1</span>
-                    <button className="c12-qbtn"><i className="ph ph-plus"></i></button>
+                    <button 
+                      className="c12-qbtn" 
+                      onClick={() => updateQuantity(index, (item.quantity || 1) - 1)}
+                      disabled={(item.quantity || 1) <= 1}
+                    >
+                      <i className="ph ph-minus"></i>
+                    </button>
+                    <span className="c12-qval">{item.quantity || 1}</span>
+                    <button 
+                      className="c12-qbtn"
+                      onClick={() => updateQuantity(index, (item.quantity || 1) + 1)}
+                    >
+                      <i className="ph ph-plus"></i>
+                    </button>
                   </div>
                 </div>
               </div>
-              <button className="c12-del" onClick={() => {
-                const newItems = [...cartItems]
-                newItems.splice(index, 1)
-                setCartItems(newItems)
-              }}><i className="ph ph-trash"></i></button>
+              <button className="c12-del" onClick={() => deleteItem(index)}><i className="ph ph-trash"></i></button>
             </div>
           ))}
         </div>
         <div className="order-summary">
-          <div className="os-row"><span>Subtotal</span><span>TK {subtotal.toFixed(2)}</span></div>
-          <div className="os-row"><span>Tax (5%)</span><span>TK {tax.toFixed(2)}</span></div>
-          <div className="os-row"><span>Shipping</span><span className="os-shipping-text">Calculated at checkout</span></div>
+          <div className="os-row"><span>Subtotal ({totalItems} items)</span><span>TK {subtotal.toFixed(2)}</span></div>
+          <div className="os-row"><span>Delivery</span><span>{deliveryCharge === 0 ? <span className="text-green-600 font-medium">FREE</span> : `TK ${deliveryCharge}`}</span></div>
+          {subtotal < 1000 && (
+            <div className="text-xs text-gray-400 mb-2">
+              <i className="ri-information-line"></i> Free delivery on orders over TK1000
+            </div>
+          )}
           <div className="os-row total"><span>Total</span><span>TK {total.toFixed(2)}</span></div>
         </div>
         <div className="cart-buttons">
