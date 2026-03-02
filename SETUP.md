@@ -37,15 +37,19 @@ bun run dev
 | Property | Value |
 |----------|-------|
 | **Project URL** | https://uosbndvnjposzpbtvhvq.supabase.co |
+| **Project Ref** | `uosbndvnjposzpbtvhvq` |
 | **Region** | Singapore (ap-southeast-1) |
 | **Database Type** | PostgreSQL |
 
-### Tables
+### Database Tables
 
 | Table | Description |
 |-------|-------------|
 | `categories` | Product categories |
 | `products` | Product inventory |
+| `product_varieties` | Product variants (sizes) |
+| `product_images` | Product images |
+| `product_faqs` | Product FAQs |
 | `customers` | Customer information |
 | `orders` | Customer orders |
 | `order_items` | Items in each order |
@@ -53,7 +57,51 @@ bun run dev
 | `reviews` | Product reviews |
 | `inventory_logs` | Inventory change history |
 | `abandoned_carts` | Abandoned shopping carts |
+| `cart_items` | Shopping cart items |
+| `admin_users` | Admin accounts |
 | `settings` | Store settings |
+
+---
+
+## 🔧 Supabase CLI (Optional)
+
+If you need to manage the database schema:
+
+### Install CLI
+
+```bash
+# macOS/Linux
+brew install supabase/tap/supabase
+
+# Windows
+scoop install supabase
+
+# npm/bun
+bun install -g supabase
+```
+
+### Link to Project
+
+```bash
+# Login to Supabase
+supabase login
+
+# Link to existing project
+supabase link --project-ref uosbndvnjposzpbtvhvq
+# Password: oMuu7ZXlsMSxTJK9 (from .env)
+```
+
+### Common Commands
+
+| Command | Description |
+|---------|-------------|
+| `supabase db push` | Push local migrations to remote |
+| `supabase db pull` | Pull remote schema to local |
+| `supabase migration new <name>` | Create new migration |
+| `supabase gen types typescript --linked` | Generate TypeScript types |
+| `supabase studio` | Open Supabase Studio |
+
+📖 See `SUPABASE_CLI.md` for detailed instructions.
 
 ---
 
@@ -62,10 +110,13 @@ bun run dev
 ```
 ├── .env                    # ✅ Pre-configured Supabase credentials
 ├── AI.md                   # Instructions for AI assistants
+├── SUPABASE_CLI.md        # Supabase CLI guide
 ├── SETUP.md               # This file
+├── .cursorrules           # Rules for Cursor AI
 ├── supabase/
 │   ├── config.toml        # Supabase CLI configuration
-│   └── seed.sql           # Database schema
+│   ├── seed.sql           # Database seed data
+│   └── migrations/        # Database migrations
 ├── src/
 │   ├── app/
 │   │   ├── api/           # API routes (using Supabase)
@@ -116,6 +167,7 @@ bun run dev
 | `/api/settings` | GET, PUT | Store settings |
 | `/api/inventory` | GET, POST | Inventory logs |
 | `/api/reviews` | GET, POST | Reviews |
+| `/api/abandoned` | GET, POST | Abandoned carts |
 
 ---
 
@@ -127,6 +179,7 @@ The `.env` file is already configured with:
 NEXT_PUBLIC_SUPABASE_URL=https://uosbndvnjposzpbtvhvq.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
+DATABASE_URL=postgresql://postgres.uosbndvnjposzpbtvhvq:***@...
 ```
 
 ---
@@ -181,9 +234,16 @@ Works on any platform supporting Next.js:
 ### Installation Issues
 
 ```bash
-# Clear node_modules and reinstall
+# Clear and reinstall
 rm -rf node_modules bun.lock
 bun install
+```
+
+### Supabase CLI Issues
+
+```bash
+# Re-link project
+supabase link --project-ref uosbndvnjposzpbtvhvq
 ```
 
 ---

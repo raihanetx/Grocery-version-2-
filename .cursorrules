@@ -1,26 +1,24 @@
 # Project Rules for AI Assistants
 
-## Database Configuration (CRITICAL)
+## 🔴 CRITICAL: Database Configuration
 
-This project uses Supabase PostgreSQL database. The connection is already configured.
+This project uses **SUPABASE POSTGRESQL** database. The connection is already configured.
 
-### DO NOT:
+### ❌ DO NOT:
 - Create SQLite databases
 - Set up Prisma migrations
+- Run `prisma migrate` or `prisma db push`
 - Create local database files
 - Use any database other than Supabase
+- Create a new Supabase project (one already exists)
 
-### DO:
+### ✅ DO:
 - Use the existing Supabase client from `src/lib/db.ts`
 - Use credentials from the existing `.env` file
 - Reference `AI.md` for database schema and usage examples
+- Reference `SUPABASE_CLI.md` for Supabase CLI commands
 
-## Code Style
-
-- TypeScript throughout
-- Use shadcn/ui components (already in `src/components/ui/`)
-- Tailwind CSS for styling
-- Next.js 16 App Router conventions
+---
 
 ## Database Client Usage
 
@@ -32,15 +30,59 @@ const { data, error } = await db
   .from('products')
   .select('*')
   .eq('is_active', true)
+
+// Example: Create order
+const { data, error } = await db
+  .from('orders')
+  .insert({ order_number: 'ORD-001', ... })
 ```
+
+---
+
+## Project Info
+
+| Property | Value |
+|----------|-------|
+| **Framework** | Next.js 16 (App Router) |
+| **Database** | Supabase PostgreSQL |
+| **Project Ref** | `uosbndvnjposzpbtvhvq` |
+| **Region** | Singapore |
+| **UI** | shadcn/ui + Tailwind CSS |
+
+---
 
 ## File Structure
 
-- `src/app/api/` - API routes (all use Supabase)
-- `src/components/` - React components
-- `src/lib/db.ts` - Database client (Supabase)
-- `src/types/` - TypeScript types
+| Path | Description |
+|------|-------------|
+| `src/app/api/` | API routes (all use Supabase) |
+| `src/components/` | React components |
+| `src/lib/db.ts` | Database client (Supabase) |
+| `src/types/` | TypeScript types |
+| `supabase/migrations/` | Database migrations |
+| `supabase/config.toml` | Supabase CLI config |
+
+---
+
+## Quick Start Commands
+
+```bash
+bun install    # Install dependencies
+bun run dev    # Start development server
+```
+
+No database setup required - `.env` is pre-configured.
+
+---
 
 ## Environment
 
-The `.env` file is committed and contains live Supabase credentials. Do not modify database connection settings.
+The `.env` file is committed and contains live Supabase credentials:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://uosbndvnjposzpbtvhvq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
+```
+
+Do NOT modify database connection settings without explicit permission.
