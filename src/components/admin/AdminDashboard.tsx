@@ -232,6 +232,35 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     }
   }
 
+  // Handle category image upload
+  const handleCategoryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToastMsg('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToastMsg('Image size should be less than 5MB')
+      return
+    }
+
+    // Convert to base64
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setEditingCategory(prev => prev ? { ...prev, image: base64 } : null)
+    }
+    reader.onerror = () => {
+      showToastMsg('Failed to read image file')
+    }
+    reader.readAsDataURL(file)
+  }
+
   // Product Functions
   const openProductEdit = (prod: Product | null = null) => {
     if (prod) {
@@ -1318,7 +1347,7 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
                           e.currentTarget.style.background = '#f8fafc';
                         }}
                       >
-                        <input type="file" id="catImgUp" style={{display: 'none'}} accept="image/*" />
+                        <input type="file" id="catImgUp" style={{display: 'none'}} accept="image/*" onChange={handleCategoryImageUpload} />
                         {editingCategory.image ? (
                           <img src={editingCategory.image} style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} alt="Category preview" />
                         ) : (
