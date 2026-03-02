@@ -8,7 +8,19 @@ interface ShopProps {
   addToCart: (item: CartItem) => void
 }
 
+interface CategoryData {
+  id: string
+  name: string
+  type: string
+  icon: string | null
+  image: string | null
+  status: string
+}
+
 const Shop = ({ setView, addToCart }: ShopProps) => {
+  const [categories, setCategories] = useState<CategoryData[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+
   const products: CartItem[] = [
     { id: 1, name: 'Fresh Organic Carrots', price: 80, oldPrice: 95, img: 'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png', weight: '1 KG' },
     { id: 2, name: 'Premium Potatoes', price: 45, oldPrice: 55, img: 'https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png', weight: '1 KG' },
@@ -39,6 +51,28 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
     'https://i.postimg.cc/mkPrcM8P/Whisk-fca8a55bd19b6f9a49c4cafbfd6d5bd5dr.jpg',
   ]
   const [currentHero, setCurrentHero] = useState(0)
+
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/categories')
+        const data = await res.json()
+        if (data.success && data.categories) {
+          // Filter only active categories
+          const activeCategories = data.categories.filter(
+            (cat: CategoryData) => cat.status === 'active'
+          )
+          setCategories(activeCategories)
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
