@@ -1,0 +1,46 @@
+# Project Rules for AI Assistants
+
+## Database Configuration (CRITICAL)
+
+This project uses Supabase PostgreSQL database. The connection is already configured.
+
+### DO NOT:
+- Create SQLite databases
+- Set up Prisma migrations
+- Create local database files
+- Use any database other than Supabase
+
+### DO:
+- Use the existing Supabase client from `src/lib/db.ts`
+- Use credentials from the existing `.env` file
+- Reference `AI.md` for database schema and usage examples
+
+## Code Style
+
+- TypeScript throughout
+- Use shadcn/ui components (already in `src/components/ui/`)
+- Tailwind CSS for styling
+- Next.js 16 App Router conventions
+
+## Database Client Usage
+
+```typescript
+import { db } from '@/lib/db'
+
+// Example: Fetch products
+const { data, error } = await db
+  .from('products')
+  .select('*')
+  .eq('is_active', true)
+```
+
+## File Structure
+
+- `src/app/api/` - API routes (all use Supabase)
+- `src/components/` - React components
+- `src/lib/db.ts` - Database client (Supabase)
+- `src/types/` - TypeScript types
+
+## Environment
+
+The `.env` file is committed and contains live Supabase credentials. Do not modify database connection settings.

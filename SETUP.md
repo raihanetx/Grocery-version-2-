@@ -1,142 +1,46 @@
 # Grocery E-commerce Application - Version 2
 
-A modern, full-featured grocery e-commerce application built with Next.js 16, Supabase, and TypeScript.
+> ⚠️ **IMPORTANT**: This project uses **SUPABASE** (PostgreSQL). It is NOT configured for SQLite or any other database. The `.env` file is already configured with live credentials.
 
-## 🚀 Features
+---
 
-- **Modern UI** - Beautiful, responsive design with shadcn/ui components
-- **Product Management** - Categories, products, inventory tracking
-- **Shopping Cart** - Add, remove, update quantities
-- **Checkout** - Complete checkout process with order tracking
-- **Admin Dashboard** - Manage products, orders, customers, and settings
-- **Supabase Integration** - Real-time database with PostgreSQL
-- **Authentication** - Secure user authentication with NextAuth.js
-
-## 📋 Prerequisites
-
-- Node.js 18+ or Bun
-- Supabase account (free tier available)
-- Git
-
-## 🛠️ Setup Instructions
-
-### 1. Clone the Repository
+## 🚀 Quick Start (2 steps!)
 
 ```bash
-git clone https://github.com/raihanetx/Grocery-version-2-.git
-cd Grocery-version-2-
-```
-
-### 2. Install Dependencies
-
-```bash
+# 1. Install dependencies
 bun install
-# or
-npm install
-```
 
-### 3. Set Up Supabase
-
-1. Go to [Supabase](https://supabase.com) and create a new project
-2. Go to Project Settings > API to get your credentials
-3. Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-4. Update `.env` with your Supabase credentials:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-### 4. Set Up Database Schema
-
-Option A: Using Supabase SQL Editor
-1. Go to Supabase Dashboard > SQL Editor
-2. Copy the contents of `supabase/seed.sql`
-3. Paste and run the SQL
-
-Option B: Using Supabase CLI
-```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
-# Link your project
-supabase link --project-ref your-project-ref
-
-# Push the schema
-supabase db push
-```
-
-### 5. Run the Development Server
-
-```bash
+# 2. Start development
 bun run dev
-# or
-npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**That's it!** The database is already set up on Supabase. No additional configuration needed.
 
-## 📁 Project Structure
+---
 
-```
-├── prisma/                 # Prisma schema (if needed)
-├── public/                 # Static assets
-├── src/
-│   ├── app/
-│   │   ├── api/           # API routes
-│   │   │   ├── categories/
-│   │   │   ├── products/
-│   │   │   ├── orders/
-│   │   │   ├── customers/
-│   │   │   ├── coupons/
-│   │   │   ├── reviews/
-│   │   │   ├── inventory/
-│   │   │   ├── settings/
-│   │   │   └── webhooks/
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   ├── admin/         # Admin dashboard components
-│   │   ├── cart/          # Shopping cart components
-│   │   ├── checkout/      # Checkout components
-│   │   ├── layout/        # Layout components (Header, BottomNav)
-│   │   ├── orders/        # Order components
-│   │   ├── shop/          # Shop/Product components
-│   │   └── ui/            # shadcn/ui components
-│   ├── contexts/          # React contexts
-│   ├── lib/
-│   │   ├── db.ts          # Supabase client
-│   │   └── supabase/      # Supabase utilities
-│   └── types/             # TypeScript types
-├── supabase/
-│   ├── config.toml        # Supabase CLI configuration
-│   └── seed.sql           # Database schema and seed data
-├── .env                   # Environment variables
-├── .env.example           # Example environment file
-└── package.json
-```
+## 📋 Technology Stack
 
-## 🔧 Available Scripts
+| Technology | Purpose |
+|------------|---------|
+| Next.js 16 | Frontend Framework |
+| TypeScript | Language |
+| Supabase | PostgreSQL Database |
+| Tailwind CSS | Styling |
+| shadcn/ui | UI Components |
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start development server |
-| `bun run build` | Build for production |
-| `bun run start` | Start production server |
-| `bun run lint` | Run ESLint |
-| `bun run db:push` | Push Prisma schema changes |
-| `bun run db:studio` | Open Prisma Studio |
+---
 
-## 🗄️ Database Tables
+## 🗄️ Database Information
+
+### Supabase Configuration
+
+| Property | Value |
+|----------|-------|
+| **Project URL** | https://uosbndvnjposzpbtvhvq.supabase.co |
+| **Region** | Singapore (ap-southeast-1) |
+| **Database Type** | PostgreSQL |
+
+### Tables
 
 | Table | Description |
 |-------|-------------|
@@ -151,18 +55,83 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `abandoned_carts` | Abandoned shopping carts |
 | `settings` | Store settings |
 
+---
+
+## 📁 Project Structure
+
+```
+├── .env                    # ✅ Pre-configured Supabase credentials
+├── AI.md                   # Instructions for AI assistants
+├── SETUP.md               # This file
+├── supabase/
+│   ├── config.toml        # Supabase CLI configuration
+│   └── seed.sql           # Database schema
+├── src/
+│   ├── app/
+│   │   ├── api/           # API routes (using Supabase)
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/
+│   │   ├── admin/         # Admin dashboard
+│   │   ├── cart/          # Shopping cart
+│   │   ├── checkout/      # Checkout flow
+│   │   ├── layout/        # Header, Navigation
+│   │   ├── orders/        # Order management
+│   │   ├── shop/          # Product display
+│   │   └── ui/            # shadcn/ui components
+│   ├── contexts/          # React contexts
+│   ├── lib/
+│   │   ├── db.ts          # Supabase client
+│   │   └── supabase/      # Supabase utilities
+│   └── types/             # TypeScript types
+└── package.json
+```
+
+---
+
+## 🔧 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start development server |
+| `bun run build` | Build for production |
+| `bun run lint` | Run ESLint |
+
+---
+
+## 🌐 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/categories` | GET, POST | Categories |
+| `/api/categories/[id]` | GET, PUT, DELETE | Single category |
+| `/api/products` | GET, POST | Products |
+| `/api/products/[id]` | GET, PUT, DELETE | Single product |
+| `/api/orders` | GET, POST | Orders |
+| `/api/orders/[id]` | GET, PUT, DELETE | Single order |
+| `/api/customers` | GET, POST | Customers |
+| `/api/customers/[id]` | GET, PUT, DELETE | Single customer |
+| `/api/coupons` | GET, POST | Coupons |
+| `/api/coupons/validate` | POST | Validate coupon |
+| `/api/settings` | GET, PUT | Store settings |
+| `/api/inventory` | GET, POST | Inventory logs |
+| `/api/reviews` | GET, POST | Reviews |
+
+---
+
 ## 🔐 Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
-| `NEXTAUTH_SECRET` | NextAuth.js secret |
-| `NEXTAUTH_URL` | Your app URL |
-| `DATABASE_URL` | PostgreSQL connection string |
+The `.env` file is already configured with:
 
-## 📱 Features Overview
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://uosbndvnjposzpbtvhvq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
+```
+
+---
+
+## 📱 Features
 
 ### Customer Features
 - Browse products by category
@@ -181,36 +150,48 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Inventory tracking
 - Settings configuration
 
+---
+
 ## 🚀 Deployment
 
-### Deploy to Vercel
+### Vercel (Recommended)
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy!
+1. Push code to GitHub
+2. Connect to Vercel
+3. Deploy (env variables are already in `.env`)
 
-### Deploy to Other Platforms
+### Other Platforms
 
-The app can be deployed to any platform that supports Next.js:
+Works on any platform supporting Next.js:
 - Netlify
 - Railway
 - Render
-- AWS Amplify
 - Docker
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-If you encounter any issues, please open an issue on GitHub.
 
 ---
 
-Built with ❤️ using Next.js, Supabase, and shadcn/ui
+## 🆘 Troubleshooting
+
+### Database Connection Issues
+
+1. Verify `.env` file exists with correct credentials
+2. Check Supabase project is active at https://supabase.com/dashboard
+3. Verify `src/lib/db.ts` is using Supabase client
+
+### Installation Issues
+
+```bash
+# Clear node_modules and reinstall
+rm -rf node_modules bun.lock
+bun install
+```
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+**Built with ❤️ using Next.js, Supabase, and shadcn/ui**
