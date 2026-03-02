@@ -17,28 +17,31 @@ interface CategoryData {
   status: string
 }
 
+interface ProductVariety {
+  id: string
+  name: string
+  price: number
+  stock: number
+  discount: string | null
+}
+
+interface ProductData {
+  id: string
+  name: string
+  image: string | null
+  shortDesc: string | null
+  isOffer: boolean
+  status: string
+  varieties: ProductVariety[]
+  category: { id: string; name: string } | null
+}
+
 const Shop = ({ setView, addToCart }: ShopProps) => {
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
-
-  const products: CartItem[] = [
-    { id: 1, name: 'Fresh Organic Carrots', price: 80, oldPrice: 95, img: 'https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png', weight: '1 KG' },
-    { id: 2, name: 'Premium Potatoes', price: 45, oldPrice: 55, img: 'https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png', weight: '1 KG' },
-    { id: 3, name: 'Fresh Tomatoes', price: 60, oldPrice: 75, img: 'https://i.postimg.cc/mr7CkxtQ/1000020584-removebg-preview.png', weight: '500g' },
-    { id: 4, name: 'Organic Spinach', price: 30, oldPrice: 40, img: 'https://i.postimg.cc/MG1VHkvz/1000020586-removebg-preview.png', weight: '1 Bundle' },
-    { id: 5, name: 'Crisp Cucumbers', price: 50, oldPrice: 65, img: 'https://i.postimg.cc/TPng18pY/1000020587-removebg-preview.png', weight: '1 KG' },
-    { id: 6, name: 'Fresh Onions', price: 35, oldPrice: 45, img: 'https://i.postimg.cc/1zDwXxfR/1000020590-removebg-preview.png', weight: '1 KG' },
-    { id: 7, name: 'Green Peppers', price: 55, oldPrice: 70, img: 'https://i.postimg.cc/TPng18pL/1000020591-removebg-preview.png', weight: '500g' },
-    { id: 8, name: 'Fresh Garlic', price: 40, oldPrice: 50, img: 'https://i.postimg.cc/mr7Ckxt4/1000020592-removebg-preview.png', weight: '250g' },
-    { id: 9, name: 'Organic Ginger', price: 45, oldPrice: 55, img: 'https://i.postimg.cc/K86tmcvZ/1000020593-removebg-preview.png', weight: '200g' },
-    { id: 10, name: 'Fresh Broccoli', price: 70, oldPrice: 85, img: 'https://i.postimg.cc/qR0nCm36/1000020611-removebg-preview.png', weight: '1 Piece' },
-    { id: 11, name: 'Red Apples', price: 90, oldPrice: 110, img: 'https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png', weight: '1 KG' },
-    { id: 12, name: 'Fresh Bananas', price: 50, oldPrice: 60, img: 'https://i.postimg.cc/bw71qYYK/IMG-20260228-163147.png', weight: '1 Dozen' },
-    { id: 13, name: 'Sweet Oranges', price: 80, oldPrice: 95, img: 'https://i.postimg.cc/mr7Ckxtx/IMG-20260228-163156.png', weight: '1 KG' },
-    { id: 14, name: 'Grapes Green', price: 120, oldPrice: 140, img: 'https://i.postimg.cc/htkVK4PD/IMG-20260228-163208.png', weight: '500g' },
-    { id: 15, name: 'Mango Fresh', price: 150, oldPrice: 180, img: 'https://i.postimg.cc/Z5G6JYKm/IMG-20260228-163217.png', weight: '1 KG' },
-    { id: 16, name: 'Papaya Ripe', price: 60, oldPrice: 75, img: 'https://i.postimg.cc/vZJ5G8Hd/IMG-20260228-163228.png', weight: '1 Piece' }
-  ]
+  const [products, setProducts] = useState<ProductData[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [offerProducts, setOfferProducts] = useState<ProductData[]>([])
 
   const heroImages = [
     'https://i.postimg.cc/zfN3dyGV/Whisk-785426d5b3a55ac9f384abb1c653efdedr.jpg',
@@ -59,7 +62,6 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
         const res = await fetch('/api/categories')
         const data = await res.json()
         if (data.success && data.categories) {
-          // Filter only active categories
           const activeCategories = data.categories.filter(
             (cat: CategoryData) => cat.status === 'active'
           )
@@ -74,12 +76,70 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
     fetchCategories()
   }, [])
 
+  // Fetch products from database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('/api/products')
+        const data = await res.json()
+        if (data.success && data.products) {
+          const activeProducts = data.products.filter(
+            (prod: ProductData) => prod.status === 'active'
+          )
+          setProducts(activeProducts)
+          // Filter offer products
+          const offers = activeProducts.filter((p: ProductData) => p.isOffer)
+          setOfferProducts(offers)
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error)
+      } finally {
+        setProductsLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [])
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentHero((prev) => (prev + 1) % heroImages.length)
     }, 4000)
     return () => clearInterval(interval)
   }, [])
+
+  // Helper to calculate discount percentage
+  const calcDiscount = (variety: ProductVariety): number => {
+    if (!variety.discount) return 0
+    if (variety.discount.includes('%')) {
+      return parseInt(variety.discount.replace('%', ''))
+    }
+    // Fixed discount - calculate percentage
+    const fixedDiscount = parseFloat(variety.discount)
+    return Math.round((fixedDiscount / variety.price) * 100)
+  }
+
+  // Helper to get old price
+  const getOldPrice = (variety: ProductVariety): number => {
+    if (!variety.discount) return variety.price
+    if (variety.discount.includes('%')) {
+      const pct = parseInt(variety.discount.replace('%', '')) / 100
+      return Math.round(variety.price / (1 - pct))
+    }
+    return variety.price + parseFloat(variety.discount)
+  }
+
+  // Convert product to cart item format
+  const productToCartItem = (product: ProductData): CartItem => {
+    const firstVariety = product.varieties[0] || { name: 'Default', price: 0, stock: 0, discount: null }
+    return {
+      id: parseInt(product.id.slice(-6), 16) || Math.random() * 10000,
+      name: product.name,
+      price: firstVariety.price,
+      oldPrice: getOldPrice(firstVariety),
+      img: product.image || 'https://via.placeholder.com/150',
+      weight: firstVariety.name
+    }
+  }
 
   return (
     <main className="flex-grow">
@@ -116,21 +176,32 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
           </div>
           <div className="flex justify-center">
             <div className="flex gap-4 md:gap-5 overflow-x-auto md:flex-wrap md:justify-center pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar">
-              {[
-                { icon: 'ri-plant-line', name: 'Vegetables' },
-                { icon: 'ri-apple-line', name: 'Fruits' },
-                { icon: 'ri-drop-line', name: 'Dairy' },
-                { icon: 'ri-cup-line', name: 'Beverages' },
-                { icon: 'ri-restaurant-line', name: 'Meat' },
-                { icon: 'ri-cookie-line', name: 'Snacks' },
-              ].map((cat, i) => (
-                <div key={i} className="flex-shrink-0 flex flex-col items-center group cursor-pointer">
-                  <div className="w-[60px] h-[60px] md:w-[80px] md:h-[80px] rounded-xl border border-gray-300 bg-white flex items-center justify-center text-gray-700 group-hover:text-[#16a34a] group-hover:border-[#16a34a] transition-colors duration-300 mb-1">
-                    <i className={`${cat.icon} text-2xl md:text-4xl`}></i>
+              {categoriesLoading ? (
+                // Loading skeleton
+                [...Array(6)].map((_, i) => (
+                  <div key={i} className="flex-shrink-0 flex flex-col items-center">
+                    <div className="w-[60px] h-[60px] md:w-[80px] md:h-[80px] rounded-xl border border-gray-300 bg-gray-100 animate-pulse"></div>
+                    <div className="w-12 h-3 bg-gray-100 rounded mt-1 animate-pulse"></div>
                   </div>
-                  <span className="text-xs font-medium text-gray-700">{cat.name}</span>
-                </div>
-              ))}
+                ))
+              ) : categories.length === 0 ? (
+                <p className="text-gray-400 text-sm">No categories available</p>
+              ) : (
+                categories.map((cat) => (
+                  <div key={cat.id} className="flex-shrink-0 flex flex-col items-center group cursor-pointer">
+                    <div className="w-[60px] h-[60px] md:w-[80px] md:h-[80px] rounded-xl border border-gray-300 bg-white flex items-center justify-center text-gray-700 group-hover:text-[#16a34a] group-hover:border-[#16a34a] transition-colors duration-300 mb-1 overflow-hidden">
+                      {cat.type === 'icon' ? (
+                        <i className={`${cat.icon || 'ri-folder-line'} text-2xl md:text-4xl`}></i>
+                      ) : cat.image ? (
+                        <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <i className="ri-folder-line text-2xl md:text-4xl text-gray-400"></i>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-gray-700">{cat.name}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -144,48 +215,53 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
             <p className="text-gray-500 mt-0.5 text-xs md:text-sm">Exclusive deals just for you</p>
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-            <div className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] transition-all shrink-0 w-[240px] h-[100px] cursor-pointer" onClick={() => setView('product')}>
-              <div className="w-[80px] h-full flex justify-center items-center p-2 pl-6">
-                <img src="https://i.postimg.cc/B6sD1hKt/1000020579-removebg-preview.png" alt="Product" className="max-w-full max-h-full object-contain" />
-              </div>
-              <div className="w-[1px] h-[70%] bg-[#e0e0e0]"></div>
-              <div className="flex-1 py-2 px-3 flex flex-col justify-center">
-                <div className="text-[11px] text-[#ff4757] font-bold mb-1">Save 16% today</div>
-                <h2 className="text-[13px] font-semibold text-[#333] mb-1 truncate">Fresh Carrots</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-bold text-[#16a34a]">TK80.00</span>
-                  <span className="text-[10px] line-through text-[#aaa]">TK95.00</span>
+            {productsLoading ? (
+              // Loading skeletons
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] shrink-0 w-[240px] h-[100px] animate-pulse">
+                  <div className="w-[80px] h-full bg-gray-100"></div>
+                  <div className="flex-1 p-3">
+                    <div className="h-3 bg-gray-100 rounded mb-2 w-20"></div>
+                    <div className="h-4 bg-gray-100 rounded mb-2 w-32"></div>
+                    <div className="h-3 bg-gray-100 rounded w-16"></div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] transition-all shrink-0 w-[240px] h-[100px] cursor-pointer" onClick={() => setView('product')}>
-              <div className="w-[80px] h-full flex justify-center items-center p-2 pl-6">
-                <img src="https://i.postimg.cc/d1vdTWyL/1000020583-removebg-preview.png" alt="Product" className="max-w-full max-h-full object-contain" />
-              </div>
-              <div className="w-[1px] h-[70%] bg-[#e0e0e0]"></div>
-              <div className="flex-1 py-2 px-3 flex flex-col justify-center">
-                <div className="text-[11px] text-[#ff4757] font-bold mb-1">Flash Deal: 18%</div>
-                <h2 className="text-[13px] font-semibold text-[#333] mb-1 truncate">Premium Potatoes</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-bold text-[#16a34a]">TK45.00</span>
-                  <span className="text-[10px] line-through text-[#aaa]">TK55.00</span>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] transition-all shrink-0 w-[240px] h-[100px] cursor-pointer" onClick={() => setView('product')}>
-              <div className="w-[80px] h-full flex justify-center items-center p-2 pl-6">
-                <img src="https://i.postimg.cc/x1wL9jTV/IMG-20260228-163137.png" alt="Product" className="max-w-full max-h-full object-contain" />
-              </div>
-              <div className="w-[1px] h-[70%] bg-[#e0e0e0]"></div>
-              <div className="flex-1 py-2 px-3 flex flex-col justify-center">
-                <div className="text-[11px] text-[#ff4757] font-bold mb-1">Limited Stock</div>
-                <h2 className="text-[13px] font-semibold text-[#333] mb-1 truncate">Red Apples</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-bold text-[#16a34a]">TK90.00</span>
-                  <span className="text-[10px] line-through text-[#aaa]">TK110.00</span>
-                </div>
-              </div>
-            </div>
+              ))
+            ) : offerProducts.length === 0 ? (
+              <p className="text-gray-400 text-sm py-4">No offers available at the moment</p>
+            ) : (
+              offerProducts.slice(0, 5).map((product) => {
+                const variety = product.varieties[0]
+                const discount = variety ? calcDiscount(variety) : 0
+                const oldPrice = variety ? getOldPrice(variety) : 0
+                return (
+                  <div 
+                    key={product.id} 
+                    className="bg-white rounded-[10px] flex items-center overflow-hidden border border-[#eee] transition-all shrink-0 w-[240px] h-[100px] cursor-pointer hover:shadow-md" 
+                    onClick={() => setView('product')}
+                  >
+                    <div className="w-[80px] h-full flex justify-center items-center p-2 pl-6">
+                      <img 
+                        src={product.image || 'https://via.placeholder.com/80'} 
+                        alt={product.name} 
+                        className="max-w-full max-h-full object-contain" 
+                      />
+                    </div>
+                    <div className="w-[1px] h-[70%] bg-[#e0e0e0]"></div>
+                    <div className="flex-1 py-2 px-3 flex flex-col justify-center">
+                      <div className="text-[11px] text-[#ff4757] font-bold mb-1">Save {discount}% today</div>
+                      <h2 className="text-[13px] font-semibold text-[#333] mb-1 truncate">{product.name}</h2>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-bold text-[#16a34a]">TK{variety?.price || 0}.00</span>
+                        {oldPrice > (variety?.price || 0) && (
+                          <span className="text-[10px] line-through text-[#aaa]">TK{oldPrice}.00</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </section>
@@ -193,33 +269,73 @@ const Shop = ({ setView, addToCart }: ShopProps) => {
       {/* Product Grid */}
       <section className="pb-12 pt-2">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-            {products.map((item) => (
-              <div key={item.id} onClick={() => setView('product')} className="bg-white p-3 shadow-sm relative cursor-pointer transition-all duration-300 flex flex-col w-full min-h-[250px] border border-gray-200 rounded-2xl hover:shadow-lg">
-                <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded z-10">-15%</span>
-                <div className="flex-grow flex items-center justify-center py-2">
-                  <div className="w-full h-[140px] flex items-center justify-center">
-                    <img src={item.img} alt={item.name} className="w-full h-full object-contain" loading="lazy"/>
-                  </div>
+          {productsLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white p-3 shadow-sm border border-gray-200 rounded-2xl animate-pulse min-h-[250px]">
+                  <div className="h-[140px] bg-gray-100 rounded mb-3"></div>
+                  <div className="h-4 bg-gray-100 rounded mb-2 w-3/4"></div>
+                  <div className="h-3 bg-gray-100 rounded mb-2 w-1/2"></div>
+                  <div className="h-8 bg-gray-100 rounded-full"></div>
                 </div>
-                <div className="flex flex-col mt-auto">
-                  <h3 className="text-sm font-medium text-gray-900 truncate font-bangla">{item.name}</h3>
-                  <div className="flex items-center gap-2 mb-2 mt-0.5">
-                    <span className="text-sm font-semibold text-[#16a34a]">TK {item.price}</span>
-                    <span className="text-xs text-gray-500 line-through">TK {item.oldPrice}</span>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <i className="ri-shopping-bag-line text-5xl text-gray-300 mb-4"></i>
+              <p className="text-gray-400">No products available</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+              {products.map((product) => {
+                const variety = product.varieties[0]
+                const discount = variety ? calcDiscount(variety) : 0
+                const oldPrice = variety ? getOldPrice(variety) : 0
+                const cartItem = productToCartItem(product)
+                
+                return (
+                  <div 
+                    key={product.id} 
+                    onClick={() => setView('product')} 
+                    className="bg-white p-3 shadow-sm relative cursor-pointer transition-all duration-300 flex flex-col w-full min-h-[250px] border border-gray-200 rounded-2xl hover:shadow-lg"
+                  >
+                    {discount > 0 && (
+                      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded z-10">-{discount}%</span>
+                    )}
+                    <div className="flex-grow flex items-center justify-center py-2">
+                      <div className="w-full h-[140px] flex items-center justify-center">
+                        <img 
+                          src={product.image || 'https://via.placeholder.com/150'} 
+                          alt={product.name} 
+                          className="w-full h-full object-contain" 
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col mt-auto">
+                      <h3 className="text-sm font-medium text-gray-900 truncate font-bangla">{product.name}</h3>
+                      <div className="flex items-center gap-2 mb-2 mt-0.5">
+                        <span className="text-sm font-semibold text-[#16a34a]">TK {variety?.price || 0}</span>
+                        {oldPrice > (variety?.price || 0) && (
+                          <span className="text-xs text-gray-500 line-through">TK {oldPrice}</span>
+                        )}
+                      </div>
+                      <button 
+                        className="w-full text-xs font-bold py-1.5 flex items-center justify-center gap-1 bg-[#16a34a] text-white rounded-full border-none cursor-pointer transition-transform duration-200 active:scale-95" 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          addToCart(cartItem);
+                        }}
+                      >
+                        <i className="ri-shopping-cart-line text-sm"></i>
+                        Add to Cart
+                      </button>
+                    </div>
                   </div>
-                  <button className="w-full text-xs font-bold py-1.5 flex items-center justify-center gap-1 bg-[#16a34a] text-white rounded-full border-none cursor-pointer transition-transform duration-200 active:scale-95" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      addToCart(item);
-                    }}>
-                    <i className="ri-shopping-cart-line text-sm"></i>
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
     </main>
