@@ -1319,10 +1319,14 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
   const [settings, setSettings] = useState<Settings>({
     websiteName: 'GroceryHub',
     slogan: 'Freshness at your door',
+    logoUrl: '',
     faviconUrl: '',
+    bannerImages: [],
     insideDhakaDelivery: 60,
     outsideDhakaDelivery: 120,
     freeDeliveryMin: 1000,
+    universalDelivery: 0,
+    useUniversalDelivery: false,
     whatsappNumber: '',
     phoneNumber: '',
     facebookUrl: '',
@@ -1332,9 +1336,137 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
     refundPolicy: '',
     privacyPolicy: ''
   })
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
 
-  const handleSaveSettings = () => {
-    showToastMsg('Settings saved successfully!')
+  // Fetch settings from API
+  const fetchSettings = async () => {
+    setSettingsLoading(true)
+    try {
+      const res = await fetch('/api/settings')
+      const data = await res.json()
+      if (data.success && data.settings) {
+        setSettings(data.settings)
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error)
+      showToastMsg('Failed to load settings')
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
+
+  // Fetch settings on component mount
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  // Fetch settings when dashView changes to settings
+  useEffect(() => {
+    if (dashView === 'settings') {
+      fetchSettings()
+    }
+  }, [dashView])
+
+  // Handle image upload
+  const handleSettingsImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'logoUrl' | 'faviconUrl'
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      showToastMsg('Please select an image file')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToastMsg('Image size should be less than 5MB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setSettings(prev => ({ ...prev, [field]: base64 }))
+    }
+    reader.onerror = () => {
+      showToastMsg('Failed to read image file')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Handle banner image upload
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const currentBanners = settings.bannerImages || []
+    const newFiles = Array.from(files).slice(0, 5 - currentBanners.length)
+
+    if (currentBanners.length >= 5) {
+      showToastMsg('Maximum 5 banner images allowed')
+      return
+    }
+
+    if (files.length > newFiles.length) {
+      showToastMsg(`Only ${5 - currentBanners.length} more image(s) can be added`)
+    }
+
+    newFiles.forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        showToastMsg('Please select image files only')
+        return
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToastMsg('Image size should be less than 5MB')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string
+        setSettings(prev => ({
+          ...prev,
+          bannerImages: [...(prev.bannerImages || []), base64].slice(0, 5)
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Remove banner image
+  const removeBannerImage = (index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      bannerImages: prev.bannerImages?.filter((_, i) => i !== index) || []
+    }))
+  }
+
+  // Save settings to API
+  const handleSaveSettings = async () => {
+    setSettingsSaving(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToastMsg('Settings saved successfully!')
+        fetchSettings()
+      } else {
+        showToastMsg(data.error || 'Failed to save settings')
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      showToastMsg('Failed to save settings')
+    } finally {
+      setSettingsSaving(false)
+    }
   }
 
   // Credentials State
@@ -3428,199 +3560,296 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
       {/* SETTINGS VIEW */}
       {dashView === 'settings' && (
         <div className="p-4 md:p-8" style={{fontFamily: "'Inter', sans-serif", backgroundColor: '#f8fafc', color: '#0f172a', margin: '0', minHeight: 'calc(100vh - 80px)'}}>
+          {/* Loading State */}
+          {settingsLoading && (
+            <div style={{padding: '3rem', textAlign: 'center', color: '#64748b'}}>
+              <i className="ri-loader-4-line" style={{fontSize: '2rem', animation: 'spin 1s linear infinite'}}></i>
+              <div style={{marginTop: '0.5rem'}}>Loading settings...</div>
+            </div>
+          )}
+
           {/* Page content */}
-          <div style={{padding: '2rem', maxWidth: '1200px', margin: '0 auto'}}>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem'}}>
-              {/* Left Column: Branding & Links */}
-              <div>
-                {/* Branding Card */}
-                <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
-                  <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <i className="ri-medal-line"></i> Store Branding
-                  </h3>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Website Name</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-global-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="e.g. GroceryHub" value={settings.websiteName}
-                        onChange={(e) => setSettings({...settings, websiteName: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}} 
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
-                    </div>
-                  </div>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Slogan</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-chat-quote-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="e.g. Freshness at your door" value={settings.slogan}
-                        onChange={(e) => setSettings({...settings, slogan: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
-                    </div>
-                  </div>
-                  <div style={{marginBottom: '0'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Favicon URL</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-image-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="https://link-to-favicon.ico" value={settings.faviconUrl}
-                        onChange={(e) => setSettings({...settings, faviconUrl: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Delivery Card */}
-                <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
-                  <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <i className="ri-truck-line"></i> Delivery Settings
-                  </h3>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem'}}>
-                    <div>
-                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Inside Dhaka (TK)</label>
+          {!settingsLoading && (
+            <div style={{padding: '2rem', maxWidth: '1200px', margin: '0 auto'}}>
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '2rem'}}>
+                {/* Left Column: Branding & Links */}
+                <div>
+                  {/* Branding Card */}
+                  <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+                    <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <i className="ri-medal-line"></i> Store Branding
+                    </h3>
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Website Name</label>
                       <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                        <i className="ri-map-pin-user-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                        <input type="number" value={settings.insideDhakaDelivery}
-                          onChange={(e) => setSettings({...settings, insideDhakaDelivery: parseInt(e.target.value) || 0})}
+                        <i className="ri-global-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="e.g. GroceryHub" value={settings.websiteName}
+                          onChange={(e) => setSettings({...settings, websiteName: e.target.value})}
+                          style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}} 
+                          onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
+                    </div>
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Slogan</label>
+                      <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                        <i className="ri-chat-quote-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="e.g. Freshness at your door" value={settings.slogan}
+                          onChange={(e) => setSettings({...settings, slogan: e.target.value})}
                           style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
                           onFocus={(e) => e.target.style.borderColor = '#16a34a'}
                           onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
                       </div>
                     </div>
-                    <div>
-                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Outside Dhaka (TK)</label>
+                    
+                    {/* Logo Upload */}
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Logo</label>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                        {settings.logoUrl && (
+                          <img src={settings.logoUrl} alt="Logo" style={{width: '60px', height: '60px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '4px'}} />
+                        )}
+                        <div>
+                          <input type="file" accept="image/*" id="logo-upload" onChange={(e) => handleSettingsImageUpload(e, 'logoUrl')} style={{display: 'none'}} />
+                          <button onClick={() => document.getElementById('logo-upload')?.click()} style={{padding: '0.5rem 1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', color: '#64748b'}}>
+                            <i className="ri-upload-2-line"></i> {settings.logoUrl ? 'Change Logo' : 'Upload Logo'}
+                          </button>
+                          {settings.logoUrl && (
+                            <button onClick={() => setSettings({...settings, logoUrl: ''})} style={{marginLeft: '0.5rem', padding: '0.5rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', color: '#ef4444'}}>
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Favicon Upload */}
+                    <div style={{marginBottom: '0'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Favicon</label>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                        {settings.faviconUrl && (
+                          <img src={settings.faviconUrl} alt="Favicon" style={{width: '32px', height: '32px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px'}} />
+                        )}
+                        <div>
+                          <input type="file" accept="image/*" id="favicon-upload" onChange={(e) => handleSettingsImageUpload(e, 'faviconUrl')} style={{display: 'none'}} />
+                          <button onClick={() => document.getElementById('favicon-upload')?.click()} style={{padding: '0.5rem 1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', color: '#64748b'}}>
+                            <i className="ri-upload-2-line"></i> {settings.faviconUrl ? 'Change Favicon' : 'Upload Favicon'}
+                          </button>
+                          {settings.faviconUrl && (
+                            <button onClick={() => setSettings({...settings, faviconUrl: ''})} style={{marginLeft: '0.5rem', padding: '0.5rem 1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', color: '#ef4444'}}>
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Card */}
+                  <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+                    <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <i className="ri-truck-line"></i> Delivery Settings
+                    </h3>
+                    
+                    {/* Universal Delivery Toggle */}
+                    <div style={{marginBottom: '1rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                      <label style={{display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer'}}>
+                        <input type="checkbox" checked={settings.useUniversalDelivery} onChange={(e) => setSettings({...settings, useUniversalDelivery: e.target.checked})} style={{width: '18px', height: '18px', accentColor: '#16a34a'}} />
+                        <span style={{fontSize: '0.85rem', fontWeight: 500, color: '#0f172a'}}>Use Universal Delivery Charge</span>
+                      </label>
+                      {settings.useUniversalDelivery && (
+                        <div style={{marginTop: '0.75rem'}}>
+                          <label style={{display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem'}}>Universal Charge (TK)</label>
+                          <input type="number" value={settings.universalDelivery} onChange={(e) => setSettings({...settings, universalDelivery: parseInt(e.target.value) || 0})} style={{width: '100%', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.85rem'}} />
+                        </div>
+                      )}
+                    </div>
+
+                    {!settings.useUniversalDelivery && (
+                      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem'}}>
+                        <div>
+                          <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Inside Dhaka (TK)</label>
+                          <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                            <i className="ri-map-pin-user-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                            <input type="number" value={settings.insideDhakaDelivery}
+                              onChange={(e) => setSettings({...settings, insideDhakaDelivery: parseInt(e.target.value) || 0})}
+                              style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                              onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Outside Dhaka (TK)</label>
+                          <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                            <i className="ri-map-pin-2-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                            <input type="number" value={settings.outsideDhakaDelivery}
+                              onChange={(e) => setSettings({...settings, outsideDhakaDelivery: parseInt(e.target.value) || 0})}
+                              style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                              onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div style={{marginBottom: '0'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Free Delivery Minimum Amount (TK)</label>
                       <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                        <i className="ri-map-pin-2-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                        <input type="number" value={settings.outsideDhakaDelivery}
-                          onChange={(e) => setSettings({...settings, outsideDhakaDelivery: parseInt(e.target.value) || 0})}
+                        <i className="ri-gift-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="number" placeholder="e.g. 1000" value={settings.freeDeliveryMin}
+                          onChange={(e) => setSettings({...settings, freeDeliveryMin: parseInt(e.target.value) || 0})}
                           style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
                           onFocus={(e) => e.target.style.borderColor = '#16a34a'}
                           onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
                       </div>
                     </div>
                   </div>
-                  <div style={{marginBottom: '0'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Free Delivery Minimum Amount (TK)</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-gift-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="number" placeholder="e.g. 1000" value={settings.freeDeliveryMin}
-                        onChange={(e) => setSettings({...settings, freeDeliveryMin: parseInt(e.target.value) || 0})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+
+                  {/* Social Links */}
+                  <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+                    <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <i className="ri-links-line"></i> Social & Contact
+                    </h3>
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>WhatsApp Number</label>
+                      <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                        <i className="ri-whatsapp-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="+8801xxxxxxxxx" value={settings.whatsappNumber}
+                          onChange={(e) => setSettings({...settings, whatsappNumber: e.target.value})}
+                          style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                          onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
+                    </div>
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Phone Number</label>
+                      <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                        <i className="ri-phone-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="+8801xxxxxxxxx" value={settings.phoneNumber}
+                          onChange={(e) => setSettings({...settings, phoneNumber: e.target.value})}
+                          style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                          onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
+                    </div>
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Facebook Page URL</label>
+                      <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                        <i className="ri-facebook-circle-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="https://facebook.com/yourpage" value={settings.facebookUrl}
+                          onChange={(e) => setSettings({...settings, facebookUrl: e.target.value})}
+                          style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                          onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
+                    </div>
+                    <div style={{marginBottom: '0'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Messenger Username</label>
+                      <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+                        <i className="ri-messenger-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
+                        <input type="text" placeholder="e.g. groceryhub.bd" value={settings.messengerUsername}
+                          onChange={(e) => setSettings({...settings, messengerUsername: e.target.value})}
+                          style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+                          onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Social Links */}
-                <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
-                  <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <i className="ri-links-line"></i> Social & Contact
-                  </h3>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>WhatsApp Number</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-whatsapp-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="+8801xxxxxxxxx" value={settings.whatsappNumber}
-                        onChange={(e) => setSettings({...settings, whatsappNumber: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                {/* Right Column: Content Pages */}
+                <div>
+                  {/* Banner Images Card */}
+                  <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+                    <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <i className="ri-image-line"></i> Banner Images
+                    </h3>
+                    <p style={{fontSize: '0.75rem', color: '#64748b', marginBottom: '1rem'}}>Upload banner images for your website homepage slider. Max 5 images.</p>
+                    
+                    {/* Banner Images Grid */}
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1rem'}}>
+                      {settings.bannerImages?.map((img, idx) => (
+                        <div key={idx} style={{position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0'}}>
+                          <img src={img} alt={`Banner ${idx + 1}`} style={{width: '100%', height: '80px', objectFit: 'cover'}} />
+                          <button onClick={() => removeBannerImage(idx)} style={{position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <i className="ri-close-line" style={{fontSize: '14px'}}></i>
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* Upload Button */}
+                      {(!settings.bannerImages || settings.bannerImages.length < 5) && (
+                        <div>
+                          <input type="file" accept="image/*" multiple id="banner-upload" onChange={handleBannerUpload} style={{display: 'none'}} />
+                          <button onClick={() => document.getElementById('banner-upload')?.click()} style={{width: '100%', height: '80px', border: '2px dashed #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', gap: '0.25rem'}}>
+                            <i className="ri-add-line" style={{fontSize: '1.5rem'}}></i>
+                            <span style={{fontSize: '0.7rem'}}>Add Banner</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Phone Number</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-phone-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="+8801xxxxxxxxx" value={settings.phoneNumber}
-                        onChange={(e) => setSettings({...settings, phoneNumber: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
+
+                  <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
+                    <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <i className="ri-file-text-line"></i> Page Content (About & Policy)
+                    </h3>
+
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>About Us</label>
+                      <textarea placeholder="Write about your company..." value={settings.aboutUs}
+                        onChange={(e) => setSettings({...settings, aboutUs: e.target.value})}
+                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
                         onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
+                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
+                    </div>
+
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Terms & Conditions</label>
+                      <textarea placeholder="Company terms and rules..." value={settings.termsConditions}
+                        onChange={(e) => setSettings({...settings, termsConditions: e.target.value})}
+                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
+                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
+                    </div>
+
+                    <div style={{marginBottom: '1rem'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Refund Policy</label>
+                      <textarea placeholder="Refund and return rules..." value={settings.refundPolicy}
+                        onChange={(e) => setSettings({...settings, refundPolicy: e.target.value})}
+                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
+                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
+                    </div>
+
+                    <div style={{marginBottom: '0'}}>
+                      <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Privacy Policy</label>
+                      <textarea placeholder="How you handle customer data..." value={settings.privacyPolicy}
+                        onChange={(e) => setSettings({...settings, privacyPolicy: e.target.value})}
+                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
+                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
+                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
                     </div>
                   </div>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Facebook Page URL</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-facebook-circle-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="https://facebook.com/yourpage" value={settings.facebookUrl}
-                        onChange={(e) => setSettings({...settings, facebookUrl: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
-                    </div>
-                  </div>
-                  <div style={{marginBottom: '0'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Messenger Username</label>
-                    <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
-                      <i className="ri-messenger-line" style={{position: 'absolute', left: '12px', color: '#64748b', fontSize: '1rem'}}></i>
-                      <input type="text" placeholder="e.g. groceryhub.bd" value={settings.messengerUsername}
-                        onChange={(e) => setSettings({...settings, messengerUsername: e.target.value})}
-                        style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem 0.6rem 2.5rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none'}}
-                        onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'} />
-                    </div>
-                  </div>
+
+                  {/* Save Button */}
+                  <button onClick={handleSaveSettings} disabled={settingsSaving}
+                    style={{background: settingsSaving ? '#9ca3af' : '#16a34a', color: '#ffffff', fontWeight: 700, padding: '0.8rem 2rem', borderRadius: '8px', cursor: settingsSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'transform 0.2s, opacity 0.2s', border: 'none', width: '100%', fontSize: '0.95rem'}}
+                    onMouseEnter={(e) => { if (!settingsSaving) { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                    {settingsSaving ? (
+                      <>
+                        <i className="ri-loader-4-line" style={{animation: 'spin 1s linear infinite'}}></i> Saving...
+                      </>
+                    ) : (
+                      <>
+                        <i className="ri-save-line"></i> Save Changes
+                      </>
+                    )}
+                  </button>
                 </div>
-              </div>
-
-              {/* Right Column: Content Pages */}
-              <div>
-                <div style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)'}}>
-                  <h3 style={{fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <i className="ri-file-text-line"></i> Page Content (About & Policy)
-                  </h3>
-
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>About Us</label>
-                    <textarea placeholder="Write about your company..." value={settings.aboutUs}
-                      onChange={(e) => setSettings({...settings, aboutUs: e.target.value})}
-                      style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
-                      onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
-                  </div>
-
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Terms & Conditions</label>
-                    <textarea placeholder="Company terms and rules..." value={settings.termsConditions}
-                      onChange={(e) => setSettings({...settings, termsConditions: e.target.value})}
-                      style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
-                      onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
-                  </div>
-
-                  <div style={{marginBottom: '1rem'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Refund Policy</label>
-                    <textarea placeholder="Refund and return rules..." value={settings.refundPolicy}
-                      onChange={(e) => setSettings({...settings, refundPolicy: e.target.value})}
-                      style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
-                      onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
-                  </div>
-
-                  <div style={{marginBottom: '0'}}>
-                    <label style={{display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.4rem', fontWeight: 500}}>Privacy Policy</label>
-                    <textarea placeholder="How you handle customer data..." value={settings.privacyPolicy}
-                      onChange={(e) => setSettings({...settings, privacyPolicy: e.target.value})}
-                      style={{width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.6rem 0.8rem', color: '#0f172a', fontSize: '0.9rem', transition: 'border-color 0.2s', outline: 'none', minHeight: '120px', resize: 'vertical'}}
-                      onFocus={(e) => e.target.style.borderColor = '#16a34a'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}></textarea>
-                  </div>
-                </div>
-
-                {/* Save Button */}
-                <button onClick={handleSaveSettings}
-                  style={{background: '#16a34a', color: '#ffffff', fontWeight: 700, padding: '0.8rem 2rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContentContent: 'center', gap: '0.5rem', transition: 'transform 0.2s, opacity 0.2s', border: 'none', width: '100%', fontSize: '0.95rem'}}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-                  <i className="ri-save-line"></i> Save Changes
-                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

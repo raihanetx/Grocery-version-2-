@@ -241,9 +241,12 @@ model Settings {
   slogan              String?
   logoUrl             String?
   faviconUrl          String?
+  bannerImages        String?  // JSON array of image URLs/base64
   insideDhakaDelivery Float    @default(60)
   outsideDhakaDelivery Float   @default(120)
   freeDeliveryMin     Float    @default(1000)
+  universalDelivery   Float    @default(0)
+  useUniversalDelivery Boolean @default(false)
   whatsappNumber      String?
   phoneNumber         String?
   facebookUrl         String?

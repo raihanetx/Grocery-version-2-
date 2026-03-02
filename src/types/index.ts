@@ -221,12 +221,17 @@ export interface CustomerProfile {
 
 // Settings Types
 export interface Settings {
+  id?: string
   websiteName: string
   slogan: string
+  logoUrl: string
   faviconUrl: string
+  bannerImages: string[]
   insideDhakaDelivery: number
   outsideDhakaDelivery: number
   freeDeliveryMin: number
+  universalDelivery: number
+  useUniversalDelivery: boolean
   whatsappNumber: string
   phoneNumber: string
   facebookUrl: string
