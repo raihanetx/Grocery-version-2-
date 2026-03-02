@@ -9,47 +9,61 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const whereClause: {
-      OR?: Array<{
-        name?: { contains: string; mode: 'insensitive' }
-        phone?: { contains: string; mode: 'insensitive' }
-      }>
-    } = {}
+    // Build query
+    let query = db.from('customers').select(`
+      id,
+      name,
+      phone,
+      address,
+      email,
+      created_at,
+      orders (
+        id,
+        total,
+        status,
+        courier_status,
+        created_at
+      )
+    `, { count: 'exact' })
 
     if (search) {
-      whereClause.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } }
-      ]
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
     }
 
-    // Get customers with their orders
-    const customers = await db.customer.findMany({
-      where: whereClause,
-      include: {
-        orders: {
-          select: {
-            id: true,
-            total: true,
-            status: true,
-            createdAt: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit,
-      skip: offset
-    })
+    const { data: customers, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch customers' },
+        { status: 500 }
+      )
+    }
 
     // Calculate stats for each customer
-    const customersWithStats = customers.map(customer => {
-      const totalOrders = customer.orders.length
-      const totalSpent = customer.orders.reduce((sum, order) => sum + order.total, 0)
-      const completedOrders = customer.orders.filter(o => o.status === 'delivered' || o.courierStatus === 'Delivered').length
-      const lastOrderDate = customer.orders.length > 0 
-        ? customer.orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt
+    const customersWithStats = (customers || []).map((customer: {
+      id: string
+      name: string
+      phone: string
+      address: string | null
+      email: string | null
+      created_at: string
+      orders: Array<{
+        id: string
+        total: number
+        status: string
+        courier_status: string | null
+        created_at: string
+      }>
+    }) => {
+      const orders = customer.orders || []
+      const totalOrders = orders.length
+      const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0)
+      const completedOrders = orders.filter(o => o.status === 'delivered' || o.courier_status === 'Delivered').length
+      const lastOrderDate = orders.length > 0 
+        ? orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
         : null
 
       return {
@@ -62,18 +76,16 @@ export async function GET(request: NextRequest) {
         totalSpent,
         completedOrders,
         lastOrderDate,
-        createdAt: customer.createdAt
+        createdAt: customer.created_at
       }
     })
-
-    const total = await db.customer.count({ where: whereClause })
 
     return NextResponse.json({
       success: true,
       customers: customersWithStats,
-      total,
+      total: count || 0,
       page: Math.floor(offset / limit) + 1,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil((count || 0) / limit)
     })
   } catch (error) {
     console.error('Error fetching customers:', error)

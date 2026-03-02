@@ -124,3 +124,201 @@
  GET /api/settings 200 in 1575ms (compile: 1098µs, render: 1574ms)
  GET /api/settings 200 in 586ms (compile: 1256µs, render: 585ms)
  GET /api/settings 200 in 890ms (compile: 1410µs, render: 888ms)
+ GET / 200 in 27ms (compile: 1698µs, render: 25ms)
+ GET /api/categories 200 in 185ms (compile: 1718µs, render: 184ms)
+ GET /api/products 200 in 171ms (compile: 1366µs, render: 170ms)
+ GET /api/settings 200 in 471ms (compile: 1117µs, render: 470ms)
+ GET /api/settings 200 in 473ms (compile: 1569µs, render: 472ms)
+ GET /api/settings 200 in 376ms (compile: 1442µs, render: 375ms)
+ GET / 200 in 33ms (compile: 1708µs, render: 31ms)
+ GET /api/categories 200 in 90ms (compile: 956µs, render: 89ms)
+ GET /api/products 200 in 105ms (compile: 1965µs, render: 103ms)
+ GET /api/settings 200 in 390ms (compile: 1143µs, render: 388ms)
+ GET /api/settings 200 in 365ms (compile: 1252µs, render: 364ms)
+ GET /api/settings 200 in 213ms (compile: 1293µs, render: 211ms)
+ GET / 200 in 26ms (compile: 3ms, render: 24ms)
+ GET / 200 in 34ms (compile: 2ms, render: 32ms)
+ GET /api/categories 200 in 662ms (compile: 2ms, render: 659ms)
+ GET /api/products 200 in 675ms (compile: 1764µs, render: 673ms)
+ GET /api/settings 200 in 1273ms (compile: 1573µs, render: 1271ms)
+ GET /api/settings 200 in 282ms (compile: 1450µs, render: 280ms)
+ GET /api/settings 200 in 258ms (compile: 1361µs, render: 257ms)
+ GET /api/products 200 in 107ms (compile: 5ms, render: 102ms)
+Error fetching reviews: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/reviews/route.ts:17:37)
+  15 |     }
+  16 |
+> 17 |     const reviews = await db.review.findMany({
+     |                                     ^
+  18 |       where: whereClause,
+  19 |       include: {
+  20 |         product: {
+ GET /api/reviews?productId=cmm973crd002irg40qku2lvxb 500 in 386ms (compile: 212ms, render: 174ms)
+Error fetching product: TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at GET (src/app/api/products/[id]/route.ts:12:38)
+  10 |     const { id } = await params
+  11 |
+> 12 |     const product = await db.product.findUnique({
+     |                                      ^
+  13 |       where: { id },
+  14 |       include: {
+  15 |         varieties: true,
+ GET /api/products/cmm973crd002irg40qku2lvxb 500 in 911ms (compile: 809ms, render: 102ms)
+ GET /api/categories 200 in 725ms (compile: 5ms, render: 720ms)
+ GET /api/products 200 in 737ms (compile: 24ms, render: 713ms)
+ GET /api/settings 200 in 2.1s (compile: 2ms, render: 2.1s)
+Error fetching reviews: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/reviews/route.ts:17:37)
+  15 |     }
+  16 |
+> 17 |     const reviews = await db.review.findMany({
+     |                                     ^
+  18 |       where: whereClause,
+  19 |       include: {
+  20 |         product: {
+ GET /api/reviews?productId=cmm971ze6001urg40htl1hyfc 500 in 50ms (compile: 2ms, render: 48ms)
+Error fetching product: TypeError: Cannot read properties of undefined (reading 'findUnique')
+    at GET (src/app/api/products/[id]/route.ts:12:38)
+  10 |     const { id } = await params
+  11 |
+> 12 |     const product = await db.product.findUnique({
+     |                                      ^
+  13 |       where: { id },
+  14 |       include: {
+  15 |         varieties: true,
+ GET /api/products/cmm971ze6001urg40htl1hyfc 500 in 100ms (compile: 34ms, render: 66ms)
+ GET /api/products 200 in 305ms (compile: 56ms, render: 249ms)
+ GET /api/categories 200 in 317ms (compile: 7ms, render: 310ms)
+ GET /api/products 200 in 438ms (compile: 2ms, render: 435ms)
+ GET /api/settings 200 in 1236ms (compile: 3ms, render: 1233ms)
+ GET / 200 in 50ms (compile: 5ms, render: 45ms)
+ GET /api/categories 200 in 124ms (compile: 3ms, render: 121ms)
+ GET /api/products 200 in 405ms (compile: 1715µs, render: 404ms)
+ GET /api/settings 200 in 667ms (compile: 2ms, render: 665ms)
+ GET /api/settings 200 in 1030ms (compile: 1534µs, render: 1028ms)
+ GET /api/settings 200 in 425ms (compile: 1810µs, render: 423ms)
+ GET /api/products 200 in 126ms (compile: 1496µs, render: 125ms)
+ GET /api/categories 200 in 159ms (compile: 1790µs, render: 157ms)
+ GET /api/settings 200 in 288ms (compile: 1966µs, render: 286ms)
+ POST /api/abandoned 400 in 203ms (compile: 199ms, render: 4ms)
+ GET /api/settings 200 in 446ms (compile: 1725µs, render: 444ms)
+ GET /api/products 200 in 155ms (compile: 1028µs, render: 154ms)
+ GET /api/categories 200 in 300ms (compile: 1029µs, render: 299ms)
+ GET /api/settings 200 in 410ms (compile: 1793µs, render: 408ms)
+Error fetching reviews: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/reviews/route.ts:17:37)
+  15 |     }
+  16 |
+> 17 |     const reviews = await db.review.findMany({
+     |                                     ^
+  18 |       where: whereClause,
+  19 |       include: {
+  20 |         product: {
+ GET /api/reviews 500 in 83ms (compile: 2ms, render: 81ms)
+Error fetching inventory: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/inventory/route.ts:10:39)
+   8 |     const lowStockOnly = searchParams.get('lowStock') === 'true'
+   9 |
+> 10 |     const products = await db.product.findMany({
+     |                                       ^
+  11 |       where: {
+  12 |         status: 'active'
+  13 |       },
+ GET /api/inventory 500 in 216ms (compile: 160ms, render: 56ms)
+ GET /api/categories 200 in 248ms (compile: 1752µs, render: 246ms)
+Error fetching coupons: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/coupons/route.ts:7:37)
+   5 | export async function GET() {
+   6 |   try {
+>  7 |     const coupons = await db.coupon.findMany({
+     |                                     ^
+   8 |       include: {
+   9 |         selectedProducts: true,
+  10 |         selectedCategories: true
+ GET /api/coupons 500 in 148ms (compile: 99ms, render: 49ms)
+Error fetching customers: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/customers/route.ts:27:41)
+  25 |
+  26 |     // Get customers with their orders
+> 27 |     const customers = await db.customer.findMany({
+     |                                         ^
+  28 |       where: whereClause,
+  29 |       include: {
+  30 |         orders: {
+ GET /api/customers 500 in 198ms (compile: 133ms, render: 65ms)
+ GET /api/products?all=true 200 in 245ms (compile: 15ms, render: 230ms)
+ GET /api/settings 200 in 1055ms (compile: 966µs, render: 1054ms)
+Error fetching coupons: TypeError: Cannot read properties of undefined (reading 'findMany')
+    at GET (src/app/api/coupons/route.ts:7:37)
+   5 | export async function GET() {
+   6 |   try {
+>  7 |     const coupons = await db.coupon.findMany({
+     |                                     ^
+   8 |       include: {
+   9 |         selectedProducts: true,
+  10 |         selectedCategories: true
+ GET /api/coupons 500 in 71ms (compile: 2ms, render: 69ms)
+Error: Cannot apply unknown utility class `animate-fade-in`
+    [2m[at onInvalidCandidate (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:21:1511)][0m
+    [2m[at Te (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:16:36652)][0m
+    [2m[at /home/z/my-project/node_modules/tailwindcss/dist/lib.js:21:355][0m
+    [2m[at Rr (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:3:1718)][0m
+    [2m[at _ (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:3:1377)][0m
+    [2m[at $e (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:21:172)][0m
+    [2m[at un (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:38:294)][0m
+    [2m[at async cn (/home/z/my-project/node_modules/tailwindcss/dist/lib.js:38:631)][0m
+    [2m[at async Xr (/home/z/my-project/node_modules/@tailwindcss/node/dist/index.js:10:3417)][0m
+    [2m[at async I (/home/z/my-project/node_modules/@tailwindcss/postcss/dist/index.js:10:3977)][0m
+✓ Compiled in 115ms
+⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: /home/z/my-project/src/app/globals.css:1:1: Cannot apply unknown utility class `animate-fade-in`
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (/home/z/my-project/node_modules/@tailwindcss/postcss/dist/index.js:10:6911)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 1433ms (compile: 1277ms, render: 156ms)
+⚠ Cross origin request detected from preview-chat-11c3c217-4021-4df2-b21a-e71211f92b2a.space.z.ai to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+Persisting failed: Unable to write SST file 00000262.sst
+
+Caused by:
+    No such file or directory (os error 2)
+
+thread 'tokio-runtime-worker' (3166) panicked at /build/turbopack/crates/turbo-tasks-backend/src/backend/operation/mod.rs:156:17:
+Failed to restore task data (corrupted database or bug): Meta for NotFoundVersion::new (TaskId 128043))
+
+Caused by:
+    0: Looking up data for TaskId 128043 from database failed
+    1: Unable to open static sorted file referenced from 00000234.meta
+    2: Unable to open static sorted file 00000228.sst
+    3: No such file or directory (os error 2)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to /tmp/next-panic-125f047d5c01cfdb23428dfcee31dd45.log.
+
+To help make Turbopack better, report this error by clicking here: https://github.com/vercel/next.js/discussions/new?category=turbopack-error-report&title=Turbopack%20Error%3A%20%5Bproject%5D%2Fsrc%2Fapp%2Fglobals.css%20%5Bapp-client%5D%20%28css%29&body=Turbopack%20version%3A%20%60731ace46%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0ATurbopack%20Error%3A%20%5Bproject%5D%2Fsrc%2Fapp%2Fglobals.css%20%5Bapp-client%5D%20%28css%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+✓ Compiled in 16.9s
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+[?25h

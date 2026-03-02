@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  // Force webpack instead of turbopack
+  experimental: {
+    turbo: undefined,
+  },
 };
 
 export default nextConfig;
