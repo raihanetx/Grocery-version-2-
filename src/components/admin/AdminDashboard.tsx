@@ -1038,39 +1038,245 @@ const AdminDashboard = ({ setView }: { setView: (v: string) => void }) => {
       {dashView === 'categories' && (
         <div className="cat-mgmt-wrapper">
           {editingCategory ? (
-            <div className="cat-edit-page">
-              <div className="cat-edit-card">
-                <div style={{textAlign: 'center', marginBottom: '32px'}}><div style={{fontSize: '22px', fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#1e293b', marginBottom: '6px'}}>{categories.find(c => c.id === editingCategory.id) ? 'Edit Category' : 'Add Category'}</div></div>
-                <div className="toggle-container">
-                  <div className={`toggle-slider ${editingCategory.type === 'image' ? 'right' : ''}`}></div>
-                  <div className={`toggle-btn-switch ${editingCategory.type === 'icon' ? 'active' : ''}`} onClick={() => setEditingCategory({...editingCategory, type: 'icon'})}>Icon Library</div>
-                  <div className={`toggle-btn-switch ${editingCategory.type === 'image' ? 'active' : ''}`} onClick={() => setEditingCategory({...editingCategory, type: 'image'})}>Upload Image</div>
+            <div className="cat-edit-page" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 160px)'}}>
+              {/* Category Card with New UI */}
+              <div style={{
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                width: '100%',
+                maxWidth: '520px',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                overflow: 'hidden'
+              }}>
+                {/* Card Header */}
+                <div style={{
+                  padding: '1.25rem 1.5rem',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <h3 style={{fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', fontFamily: "'Plus Jakarta Sans', sans-serif"}}>
+                    {categories.find(c => c.id === editingCategory.id) ? 'Edit Category' : 'Add New Category'}
+                  </h3>
+                  <button 
+                    onClick={() => setEditingCategory(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#64748b',
+                      fontSize: '20px'
+                    }}
+                  >
+                    <i className="ri-close-line"></i>
+                  </button>
                 </div>
-                <div className="input-group-cat">
-                  <label className="input-label-cat">Category Name</label>
-                  <input type="text" className="form-input-box" placeholder="e.g., Organic Fruits" value={editingCategory.name} onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})} />
-                </div>
-                {editingCategory.type === 'icon' ? (
-                  <div className="input-group-cat">
-                    <label className="input-label-cat">Icon Code</label>
-                    <div className="icon-input-row">
-                      <input type="text" className="form-input-box" placeholder="ri-home-line" value={editingCategory.icon} onChange={(e) => setEditingCategory({...editingCategory, icon: e.target.value})} />
-                      <div className={`preview-box ${editingCategory.icon && editingCategory.icon.startsWith('ri-') ? 'valid' : (editingCategory.icon ? 'error' : '')}`}>
-                        <i className={editingCategory.icon && editingCategory.icon.startsWith('ri-') ? editingCategory.icon : 'ri-cursor-line'}></i>
+                
+                {/* Card Body */}
+                <div style={{padding: '1.5rem'}}>
+                  {/* Category Type */}
+                  <div style={{marginBottom: '1.25rem'}}>
+                    <label style={{display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b'}}>
+                      Category Type
+                    </label>
+                    <div style={{display: 'flex', gap: '1.5rem'}}>
+                      <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                        <input 
+                          type="radio" 
+                          name="catType" 
+                          value="icon" 
+                          checked={editingCategory.type === 'icon'} 
+                          onChange={() => setEditingCategory({...editingCategory, type: 'icon'})}
+                          style={{accentColor: '#16a34a', width: '16px', height: '16px'}}
+                        />
+                        <span style={{fontSize: '14px', color: '#475569'}}>Icon</span>
+                      </label>
+                      <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                        <input 
+                          type="radio" 
+                          name="catType" 
+                          value="image" 
+                          checked={editingCategory.type === 'image'} 
+                          onChange={() => setEditingCategory({...editingCategory, type: 'image'})}
+                          style={{accentColor: '#16a34a', width: '16px', height: '16px'}}
+                        />
+                        <span style={{fontSize: '14px', color: '#475569'}}>Image</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Category Name */}
+                  <div style={{marginBottom: '1.25rem'}}>
+                    <label style={{display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b'}}>
+                      Category Name
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter category name" 
+                      value={editingCategory.name} 
+                      onChange={(e) => setEditingCategory({...editingCategory, name: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#16a34a';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(22, 163, 74, 0.15)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#e2e8f0';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+
+                  {/* Icon Input Group - Show when type is 'icon' */}
+                  {editingCategory.type === 'icon' && (
+                    <div style={{marginBottom: '1.25rem'}}>
+                      <label style={{display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b'}}>
+                        Icon Code (Remix Icon)
+                      </label>
+                      <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+                        <input 
+                          type="text" 
+                          placeholder="e.g., ri-leaf-line" 
+                          value={editingCategory.icon || ''} 
+                          onChange={(e) => setEditingCategory({...editingCategory, icon: e.target.value})}
+                          style={{
+                            flex: 1,
+                            padding: '0.75rem 1rem',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            color: '#1e293b',
+                            fontSize: '0.875rem',
+                            transition: 'all 0.2s ease',
+                            outline: 'none'
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#16a34a';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(22, 163, 74, 0.15)';
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        />
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          background: editingCategory.icon && editingCategory.icon.startsWith('ri-') ? 'rgba(22, 163, 74, 0.1)' : '#f8fafc',
+                          border: `1px solid ${editingCategory.icon && editingCategory.icon.startsWith('ri-') ? '#16a34a' : '#e2e8f0'}`,
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: editingCategory.icon && editingCategory.icon.startsWith('ri-') ? '#16a34a' : '#94a3b8'
+                        }}>
+                          <i className={editingCategory.icon && editingCategory.icon.startsWith('ri-') ? editingCategory.icon : 'ri-cursor-line'} style={{fontSize: '20px'}}></i>
+                        </div>
+                      </div>
+                      <p style={{fontSize: '12px', color: '#64748b', marginTop: '6px'}}>
+                        Use Remix Icon codes. Example: ri-leaf-line, ri-shopping-basket-line
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Image Upload Group - Show when type is 'image' */}
+                  {editingCategory.type === 'image' && (
+                    <div style={{marginBottom: '1.25rem'}}>
+                      <label style={{display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.5rem', color: '#1e293b'}}>
+                        Category Image
+                      </label>
+                      <div 
+                        onClick={() => document.getElementById('catImgUp')?.click()}
+                        style={{
+                          border: '2px dashed #e2e8f0',
+                          borderRadius: '12px',
+                          padding: editingCategory.image ? '1rem' : '2rem',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          background: '#f8fafc'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#16a34a';
+                          e.currentTarget.style.background = 'rgba(22, 163, 74, 0.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.background = '#f8fafc';
+                        }}
+                      >
+                        <input type="file" id="catImgUp" style={{display: 'none'}} accept="image/*" />
+                        {editingCategory.image ? (
+                          <img src={editingCategory.image} style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} alt="Category preview" />
+                        ) : (
+                          <>
+                            <i className="ri-upload-cloud-2-line" style={{fontSize: '2rem', color: '#94a3b8', marginBottom: '0.5rem', display: 'block'}}></i>
+                            <p style={{color: '#64748b', fontSize: '0.875rem'}}>Click or drag to upload image</p>
+                          </>
+                        )}
                       </div>
                     </div>
+                  )}
+
+                  {/* Buttons */}
+                  <div style={{display: 'flex', gap: '12px', marginTop: '2rem'}}>
+                    <button 
+                      onClick={() => setEditingCategory(null)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 1.25rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: '1px solid #e2e8f0',
+                        background: '#fff',
+                        color: '#475569',
+                        flex: 1
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleSaveCategory}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 1.25rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                        color: '#fff',
+                        flex: 1,
+                        boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)'
+                      }}
+                    >
+                      <i className="ri-check-line"></i>
+                      Save Category
+                    </button>
                   </div>
-                ) : (
-                  <div className="input-group-cat">
-                    <div className="upload-zone" onClick={() => document.getElementById('catImgUp')?.click()}>
-                      <input type="file" id="catImgUp" style={{display: 'none'}} accept="image/*" />
-                      {!editingCategory.image ? <p style={{color: '#64748b'}}>Click to upload</p> : <img src={editingCategory.image} style={{width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px'}} alt="Category preview" />}
-                    </div>
-                  </div>
-                )}
-                <div style={{display: 'flex', gap: '12px', marginTop: '32px'}}>
-                  <button className="cat-btn-cancel" onClick={() => setEditingCategory(null)}>Cancel</button>
-                  <button className="cat-btn-primary" onClick={handleSaveCategory}>Save Changes</button>
                 </div>
               </div>
             </div>
