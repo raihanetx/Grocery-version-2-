@@ -43,8 +43,9 @@ const Shop = ({ setView, addToCart, setSelectedProductId }: ShopProps) => {
   const [products, setProducts] = useState<ProductData[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [offerProducts, setOfferProducts] = useState<ProductData[]>([])
-
-  const heroImages = [
+  
+  // Banner images from settings
+  const defaultHeroImages = [
     'https://i.postimg.cc/zfN3dyGV/Whisk-785426d5b3a55ac9f384abb1c653efdedr.jpg',
     'https://i.postimg.cc/QCFMB50H/Whisk-186f0227f2203638e6f4806f9343b15cdr.jpg',
     'https://i.postimg.cc/0jzN6mcM/Whisk-21cf4f35609655e91844ef8ae3c7f4c9dr.jpg',
@@ -54,7 +55,24 @@ const Shop = ({ setView, addToCart, setSelectedProductId }: ShopProps) => {
     'https://i.postimg.cc/j2DjWNZX/Whisk-92ca7933c1a594782e4409c2912ffaebdr.jpg',
     'https://i.postimg.cc/mkPrcM8P/Whisk-fca8a55bd19b6f9a49c4cafbfd6d5bd5dr.jpg',
   ]
+  const [heroImages, setHeroImages] = useState<string[]>(defaultHeroImages)
   const [currentHero, setCurrentHero] = useState(0)
+
+  // Fetch settings (banner images)
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings')
+        const data = await res.json()
+        if (data.success && data.settings?.bannerImages && data.settings.bannerImages.length > 0) {
+          setHeroImages(data.settings.bannerImages)
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   // Fetch categories from database
   useEffect(() => {

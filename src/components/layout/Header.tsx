@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 interface HeaderProps {
   view: string
@@ -8,7 +8,26 @@ interface HeaderProps {
   cartCount: number
 }
 
-const Header = ({ view, setView, cartCount }: HeaderProps) => (
+const Header = ({ view, setView, cartCount }: HeaderProps) => {
+  const [logoUrl, setLogoUrl] = useState<string>('https://i.postimg.cc/4xZk3k2j/IMG-20260226-120143.png')
+
+  useEffect(() => {
+    // Fetch settings from API
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings')
+        const data = await res.json()
+        if (data.success && data.settings?.logoUrl) {
+          setLogoUrl(data.settings.logoUrl)
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  return (
   <header className="w-full bg-white border-b border-gray-200 shadow-[0_1px_4px_rgba(0,0,0,0.08)] flex items-center justify-between px-3 md:px-[2rem] h-[70px] md:h-[100px] sticky top-0 z-[200]">
     <div className="flex items-center shrink-0 w-auto">
       {(view === 'product' || view === 'admin') && (
@@ -17,7 +36,7 @@ const Header = ({ view, setView, cartCount }: HeaderProps) => (
         </div>
       )}
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('shop')}>
-        <img src="https://i.postimg.cc/4xZk3k2j/IMG-20260226-120143.png" alt="Logo" className="h-[70px] w-[70px] md:h-[90px] md:w-[90px] object-contain" />
+        <img src={logoUrl} alt="Logo" className="h-[70px] w-[70px] md:h-[90px] md:w-[90px] object-contain" />
       </div>
     </div>
 
@@ -65,6 +84,7 @@ const Header = ({ view, setView, cartCount }: HeaderProps) => (
       </div>
     </div>
   </header>
-)
+  )
+}
 
 export default Header

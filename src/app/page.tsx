@@ -10,6 +10,7 @@ import Cart from '@/components/cart/Cart'
 import Checkout from '@/components/checkout/Checkout'
 import Orders from '@/components/orders/Orders'
 import AdminDashboard from '@/components/admin/AdminDashboard'
+import { SettingsProvider } from '@/contexts/SettingsContext'
 
 // --- MAIN APP ENTRY ---
 export default function Home() {
@@ -54,17 +55,19 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen relative">
-      <Header view={view} setView={setView} cartCount={cartCount} />
-      <div className="flex-grow w-full">
-        {view === 'shop' && <Shop setView={setView} addToCart={addToCart} setSelectedProductId={setSelectedProductId} />}
-        {view === 'product' && <ProductDetail setView={setView} addToCart={addToCart} productId={selectedProductId} />}
-        {view === 'cart' && <Cart setView={setView} cartItems={cartItems} setCartItems={setCartItems} />}
-        {view === 'checkout' && <Checkout setView={setView} cartItems={cartItems} setCartItems={setCartItems} onConfirm={handleConfirmOrder} />}
-        {view === 'orders' && <Orders orders={orders} setView={setView} lastOrderId={lastOrderId} />}
-        {view === 'admin' && <AdminDashboard setView={setView} />}
+    <SettingsProvider>
+      <div className="flex flex-col min-h-screen relative">
+        <Header view={view} setView={setView} cartCount={cartCount} />
+        <div className="flex-grow w-full">
+          {view === 'shop' && <Shop setView={setView} addToCart={addToCart} setSelectedProductId={setSelectedProductId} />}
+          {view === 'product' && <ProductDetail setView={setView} addToCart={addToCart} productId={selectedProductId} />}
+          {view === 'cart' && <Cart setView={setView} cartItems={cartItems} setCartItems={setCartItems} />}
+          {view === 'checkout' && <Checkout setView={setView} cartItems={cartItems} setCartItems={setCartItems} onConfirm={handleConfirmOrder} />}
+          {view === 'orders' && <Orders orders={orders} setView={setView} lastOrderId={lastOrderId} />}
+          {view === 'admin' && <AdminDashboard setView={setView} />}
+        </div>
+        <BottomNav view={view} setView={setView} />
       </div>
-      <BottomNav view={view} setView={setView} />
-    </div>
+    </SettingsProvider>
   )
 }

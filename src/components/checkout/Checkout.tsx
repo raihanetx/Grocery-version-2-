@@ -18,6 +18,14 @@ interface CheckoutProps {
   onConfirm: (orderId: string) => void
 }
 
+interface DeliverySettings {
+  insideDhaka: number
+  outsideDhaka: number
+  freeDeliveryMin: number
+  universalDelivery: number
+  useUniversalDelivery: boolean
+}
+
 const Checkout = ({ setView, cartItems, setCartItems, onConfirm }: CheckoutProps) => {
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -43,17 +51,46 @@ const Checkout = ({ setView, cartItems, setCartItems, onConfirm }: CheckoutProps
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
 
-  // Delivery settings
-  const insideDhaka = 60
-  const outsideDhaka = 120
-  const freeDeliveryMin = 1000
+  // Delivery settings - fetch from API
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>({
+    insideDhaka: 60,
+    outsideDhaka: 120,
+    freeDeliveryMin: 1000,
+    universalDelivery: 0,
+    useUniversalDelivery: false
+  })
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings')
+        const data = await res.json()
+        if (data.success && data.settings) {
+          setDeliverySettings({
+            insideDhaka: data.settings.insideDhakaDelivery || 60,
+            outsideDhaka: data.settings.outsideDhakaDelivery || 120,
+            freeDeliveryMin: data.settings.freeDeliveryMin || 1000,
+            universalDelivery: data.settings.universalDelivery || 0,
+            useUniversalDelivery: data.settings.useUniversalDelivery || false
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0)
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)
   
-  // Delivery calculation
-  const deliveryCharge = subtotal >= freeDeliveryMin ? 0 : insideDhaka
+  // Delivery calculation - use settings
+  const { insideDhaka, outsideDhaka, freeDeliveryMin, universalDelivery, useUniversalDelivery } = deliverySettings
+  const deliveryCharge = useUniversalDelivery 
+    ? universalDelivery 
+    : (subtotal >= freeDeliveryMin ? 0 : insideDhaka)
   
   // Total with coupon discount
   const couponDiscount = appliedCoupon?.discountAmount || 0

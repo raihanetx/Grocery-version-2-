@@ -223,23 +223,25 @@ export interface CustomerProfile {
 export interface Settings {
   id?: string
   websiteName: string
-  slogan: string
-  logoUrl: string
-  faviconUrl: string
-  bannerImages: string[]
+  slogan?: string
+  logoUrl?: string
+  faviconUrl?: string
+  bannerImages?: string[]
   insideDhakaDelivery: number
   outsideDhakaDelivery: number
   freeDeliveryMin: number
   universalDelivery: number
   useUniversalDelivery: boolean
-  whatsappNumber: string
-  phoneNumber: string
-  facebookUrl: string
-  messengerUsername: string
-  aboutUs: string
-  termsConditions: string
-  refundPolicy: string
-  privacyPolicy: string
+  whatsappNumber?: string
+  phoneNumber?: string
+  facebookUrl?: string
+  messengerUsername?: string
+  aboutUs?: string
+  termsConditions?: string
+  refundPolicy?: string
+  privacyPolicy?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Credentials Types
