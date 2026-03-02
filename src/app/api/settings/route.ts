@@ -79,27 +79,40 @@ export async function PUT(request: NextRequest) {
     // Get existing settings or create new one
     let settings = await db.settings.findFirst()
 
+    // Helper to handle empty strings
+    const toNull = (value: string | null | undefined) => {
+      if (value === '' || value === undefined) return null
+      return value || null
+    }
+
+    // Helper to handle numbers
+    const toNumber = (value: number | string | undefined | null, defaultValue: number) => {
+      if (value === undefined || value === null || value === '') return defaultValue
+      const num = typeof value === 'string' ? parseFloat(value) : value
+      return isNaN(num) ? defaultValue : num
+    }
+
     if (!settings) {
       settings = await db.settings.create({
         data: {
           websiteName: body.websiteName || 'GroceryHub',
-          slogan: body.slogan || null,
-          logoUrl: body.logoUrl || null,
-          faviconUrl: body.faviconUrl || null,
-          bannerImages: body.bannerImages ? JSON.stringify(body.bannerImages) : null,
-          insideDhakaDelivery: body.insideDhakaDelivery ?? 60,
-          outsideDhakaDelivery: body.outsideDhakaDelivery ?? 120,
-          freeDeliveryMin: body.freeDeliveryMin ?? 1000,
-          universalDelivery: body.universalDelivery ?? 0,
-          useUniversalDelivery: body.useUniversalDelivery ?? false,
-          whatsappNumber: body.whatsappNumber || null,
-          phoneNumber: body.phoneNumber || null,
-          facebookUrl: body.facebookUrl || null,
-          messengerUsername: body.messengerUsername || null,
-          aboutUs: body.aboutUs || null,
-          termsConditions: body.termsConditions || null,
-          refundPolicy: body.refundPolicy || null,
-          privacyPolicy: body.privacyPolicy || null
+          slogan: toNull(body.slogan),
+          logoUrl: toNull(body.logoUrl),
+          faviconUrl: toNull(body.faviconUrl),
+          bannerImages: body.bannerImages && body.bannerImages.length > 0 ? JSON.stringify(body.bannerImages) : null,
+          insideDhakaDelivery: toNumber(body.insideDhakaDelivery, 60),
+          outsideDhakaDelivery: toNumber(body.outsideDhakaDelivery, 120),
+          freeDeliveryMin: toNumber(body.freeDeliveryMin, 1000),
+          universalDelivery: toNumber(body.universalDelivery, 0),
+          useUniversalDelivery: body.useUniversalDelivery === true,
+          whatsappNumber: toNull(body.whatsappNumber),
+          phoneNumber: toNull(body.phoneNumber),
+          facebookUrl: toNull(body.facebookUrl),
+          messengerUsername: toNull(body.messengerUsername),
+          aboutUs: toNull(body.aboutUs),
+          termsConditions: toNull(body.termsConditions),
+          refundPolicy: toNull(body.refundPolicy),
+          privacyPolicy: toNull(body.privacyPolicy)
         }
       })
     } else {
@@ -108,25 +121,25 @@ export async function PUT(request: NextRequest) {
         where: { id: settings.id },
         data: {
           websiteName: body.websiteName ?? settings.websiteName,
-          slogan: body.slogan !== undefined ? body.slogan : settings.slogan,
-          logoUrl: body.logoUrl !== undefined ? body.logoUrl : settings.logoUrl,
-          faviconUrl: body.faviconUrl !== undefined ? body.faviconUrl : settings.faviconUrl,
+          slogan: body.slogan !== undefined ? toNull(body.slogan) : settings.slogan,
+          logoUrl: body.logoUrl !== undefined ? toNull(body.logoUrl) : settings.logoUrl,
+          faviconUrl: body.faviconUrl !== undefined ? toNull(body.faviconUrl) : settings.faviconUrl,
           bannerImages: body.bannerImages !== undefined 
-            ? (body.bannerImages ? JSON.stringify(body.bannerImages) : null)
+            ? (body.bannerImages && body.bannerImages.length > 0 ? JSON.stringify(body.bannerImages) : null)
             : settings.bannerImages,
-          insideDhakaDelivery: body.insideDhakaDelivery ?? settings.insideDhakaDelivery,
-          outsideDhakaDelivery: body.outsideDhakaDelivery ?? settings.outsideDhakaDelivery,
-          freeDeliveryMin: body.freeDeliveryMin ?? settings.freeDeliveryMin,
-          universalDelivery: body.universalDelivery ?? settings.universalDelivery,
-          useUniversalDelivery: body.useUniversalDelivery ?? settings.useUniversalDelivery,
-          whatsappNumber: body.whatsappNumber !== undefined ? body.whatsappNumber : settings.whatsappNumber,
-          phoneNumber: body.phoneNumber !== undefined ? body.phoneNumber : settings.phoneNumber,
-          facebookUrl: body.facebookUrl !== undefined ? body.facebookUrl : settings.facebookUrl,
-          messengerUsername: body.messengerUsername !== undefined ? body.messengerUsername : settings.messengerUsername,
-          aboutUs: body.aboutUs !== undefined ? body.aboutUs : settings.aboutUs,
-          termsConditions: body.termsConditions !== undefined ? body.termsConditions : settings.termsConditions,
-          refundPolicy: body.refundPolicy !== undefined ? body.refundPolicy : settings.refundPolicy,
-          privacyPolicy: body.privacyPolicy !== undefined ? body.privacyPolicy : settings.privacyPolicy
+          insideDhakaDelivery: body.insideDhakaDelivery !== undefined ? toNumber(body.insideDhakaDelivery, settings.insideDhakaDelivery) : settings.insideDhakaDelivery,
+          outsideDhakaDelivery: body.outsideDhakaDelivery !== undefined ? toNumber(body.outsideDhakaDelivery, settings.outsideDhakaDelivery) : settings.outsideDhakaDelivery,
+          freeDeliveryMin: body.freeDeliveryMin !== undefined ? toNumber(body.freeDeliveryMin, settings.freeDeliveryMin) : settings.freeDeliveryMin,
+          universalDelivery: body.universalDelivery !== undefined ? toNumber(body.universalDelivery, settings.universalDelivery) : settings.universalDelivery,
+          useUniversalDelivery: body.useUniversalDelivery !== undefined ? body.useUniversalDelivery === true : settings.useUniversalDelivery,
+          whatsappNumber: body.whatsappNumber !== undefined ? toNull(body.whatsappNumber) : settings.whatsappNumber,
+          phoneNumber: body.phoneNumber !== undefined ? toNull(body.phoneNumber) : settings.phoneNumber,
+          facebookUrl: body.facebookUrl !== undefined ? toNull(body.facebookUrl) : settings.facebookUrl,
+          messengerUsername: body.messengerUsername !== undefined ? toNull(body.messengerUsername) : settings.messengerUsername,
+          aboutUs: body.aboutUs !== undefined ? toNull(body.aboutUs) : settings.aboutUs,
+          termsConditions: body.termsConditions !== undefined ? toNull(body.termsConditions) : settings.termsConditions,
+          refundPolicy: body.refundPolicy !== undefined ? toNull(body.refundPolicy) : settings.refundPolicy,
+          privacyPolicy: body.privacyPolicy !== undefined ? toNull(body.privacyPolicy) : settings.privacyPolicy
         }
       })
     }
